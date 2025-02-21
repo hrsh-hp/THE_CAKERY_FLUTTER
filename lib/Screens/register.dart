@@ -1,30 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:the_cakery/Screens/register.dart';
-import 'package:the_cakery/utils/constants.dart';
-import 'package:the_cakery/utils/validators.dart';
+import "package:flutter/material.dart";
+import "package:the_cakery/utils/constants.dart";
+import "package:the_cakery/utils/validators.dart";
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordVisible = false;
+  bool _isCnfPassVisible = false;
 
-  void _login() {
+  void _register() {
     if (_formKey.currentState!.validate()) {
       String email = _emailController.text.trim();
       String password = _passwordController.text.trim();
-      if (email == "harsh@gmail.com" && password == "123456") {
-        Constants.prefs.setBool("isLoggedIn", true);
-        Navigator.pushReplacementNamed(context, "/home");
-      } else {}
+      print(email + password);
+      Navigator.pop(context);
     }
   }
 
@@ -63,17 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 25),
                       Text(
-                        "Welcome Back,",
+                        "Welcome,",
                         textAlign: TextAlign.left,
                         style: TextStyle(
-                          fontSize: 30,
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        "Login to your Account,",
+                        "Register Yourself here",
                         textAlign: TextAlign.left,
                         style: TextStyle(
                           color: Color(0xff707070),
@@ -99,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: Validators.validateEmail,
-                        textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 15),
                       //Password field is here
@@ -130,14 +129,53 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: Validators.validatePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (value) {
-                          _login();
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 15),
+
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: !_isCnfPassVisible,
+                        textInputAction:
+                            TextInputAction.done, // Pressing enter submits form
+                        decoration: InputDecoration(
+                          labelText: "Confirm Password",
+                          prefixIcon: Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _isCnfPassVisible = !_isCnfPassVisible;
+                              });
+                            },
+                            icon: Icon(
+                              _isCnfPassVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+
+                        // ✅ Confirm Password Validation
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please confirm your password";
+                          }
+                          if (value != _passwordController.text) {
+                            return "Passwords do not match";
+                          }
+                          return null;
                         },
+
+                        // ✅ Pressing Enter submits the form
+                        onFieldSubmitted: (value) => _register(),
                       ),
                       const SizedBox(height: 20),
+
                       ElevatedButton(
-                        onPressed: _login,
+                        onPressed: _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
@@ -147,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         child: Text(
-                          "Sign In",
+                          "Sign Up",
                           style: TextStyle(color: Colors.white, fontSize: 17),
                         ),
                       ),
@@ -155,13 +193,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Don't have an account?"),
+                          Text("Already have an account?"),
                           TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, "/signup");
+                              Navigator.pop(context);
                             },
                             child: Text(
-                              "Sign Up",
+                              "Sign In",
                               style: TextStyle(fontSize: 15),
                             ),
                           ),
