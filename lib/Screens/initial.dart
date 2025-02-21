@@ -21,7 +21,10 @@ class _InitialScreenState extends State<InitialScreen>
       vsync: this,
       duration: Duration(seconds: 2), // Smooth fade-in animation
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_animationController);
+    _fadeAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(_animationController);
 
     _animationController.forward();
     _navigateToNextScreen();
@@ -53,7 +56,11 @@ class _InitialScreenState extends State<InitialScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black26, blurRadius: 10, spreadRadius: 3),
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  spreadRadius: 3,
+                ),
               ],
             ),
             child: ClipOval(
