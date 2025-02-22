@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:the_cakery/Screens/register.dart';
 import 'package:the_cakery/utils/constants.dart';
 import 'package:the_cakery/utils/validators.dart';
 

@@ -33,6 +33,7 @@ class _InitialScreenState extends State<InitialScreen>
   void _navigateToNextScreen() async {
     await Future.delayed(Duration(seconds: 3));
     Constants.prefs = await SharedPreferences.getInstance();
+    // Constants.prefs.setBool("isLoggedIn", false);
     bool isLoggedIn = Constants.prefs.getBool("isLoggedIn") ?? false;
     Navigator.pushReplacementNamed(context, isLoggedIn ? "/home" : "/login");
   }
