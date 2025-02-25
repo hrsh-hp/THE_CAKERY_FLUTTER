@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:the_cakery/utils/constants.dart';
 import 'package:the_cakery/utils/validators.dart';
+import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,16 +18,75 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      String email = _emailController.text.trim();
-      String password = _passwordController.text.trim();
-      if (email == "harsh@gmail.com" && password == "123456") {
-        Constants.prefs.setBool("isLoggedIn", true);
-        Navigator.pushReplacementNamed(context, "/home");
-      } else {}
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isLoading = true;
+    });
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+    final url = Uri.parse("${Constants.baseUrl}/auth/login/");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+      final responseData = jsonDecode(response.body);
+      print(responseData);
+      setState(() {
+        _isLoading = false;
+      });
+      if (response.statusCode == 200) {
+        if (!responseData['error']) {
+          print(responseData['data']);
+          String token = responseData['data']['token'];
+          String userSlug = responseData['data']['user']['slug'];
+          String userEmail = responseData['data']['user']['email'];
+          String userName = responseData['data']['user']['name'] ?? "-";
+
+          await Constants.prefs.setString("token", token);
+          await Constants.prefs.setString("userSlug", userSlug);
+          await Constants.prefs.setString("userEmail", userEmail);
+          await Constants.prefs.setString("userName", userName);
+          await Constants.prefs.setBool("isLoggedIn", true);
+          print("Login successful!");
+          print("Token: $token");
+          print("Slug: $userSlug");
+          Navigator.pushReplacementNamed(context, "/home");
+        } else {
+          _showErrorDialog(responseData['message']);
+        }
+      } else {
+        _showErrorDialog("Invalid Email or Password!!");
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print("Our error is : ${e.toString()}");
+      _showErrorDialog("Something went wrong! Try Again later");
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text("Login Failed"),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text("Ok"),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -135,21 +197,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      _isLoading
+                          ? Center(child: CircularProgressIndicator())
+                          : ElevatedButton(
+                            onPressed: _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              "Sign In",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          "Sign In",
-                          style: TextStyle(color: Colors.white, fontSize: 17),
-                        ),
-                      ),
                       SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,

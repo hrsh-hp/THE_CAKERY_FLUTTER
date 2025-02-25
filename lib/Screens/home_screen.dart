@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:the_cakery/Screens/accounts_screen.dart';
+import 'package:the_cakery/utils/bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -7,50 +9,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
-  final List<IconData> _outlinedIcons = [
-    Icons.home_outlined,
-    Icons.shopping_bag_outlined,
-    Icons.favorite_border,
-    Icons.shopping_cart_outlined,
-    Icons.person_outlined,
-  ];
-
-  final List<IconData> _filledIcons = [
-    Icons.home,
-    Icons.shopping_bag,
-    Icons.favorite,
-    Icons.shopping_cart,
-    Icons.person,
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.brown,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: List.generate(5, (index) {
-          return BottomNavigationBarItem(
-            icon: Icon(
-              _selectedIndex == index
-                  ? _filledIcons[index]
-                  : _outlinedIcons[index],
-            ),
-            label: ["Home", "My Orders", "Favorites", "Cart", "Account"][index],
-          );
-        }),
+      key: _scaffoldKey,
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: 0,
+        scaffoldKey: _scaffoldKey,
       ),
+      drawer: const AccountsScreen(),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
@@ -83,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        ScrollAction.getDirectionalIncrement(ScrollableState., intent)
+                      },
                       child: Text(
                         "View all",
                         style: TextStyle(fontSize: 16, color: Colors.black54),
@@ -94,9 +65,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: GridView.builder(
+                child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return GridView.builder(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 10,
