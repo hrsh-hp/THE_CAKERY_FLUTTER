@@ -47,11 +47,13 @@ class _LoginScreenState extends State<LoginScreen> {
           String userSlug = responseData['data']['user']['slug'];
           String userEmail = responseData['data']['user']['email'];
           String userName = responseData['data']['user']['name'] ?? "-";
+          String image_url = responseData['data']['user']['image_url'] ?? '-';
 
           await Constants.prefs.setString("token", token);
           await Constants.prefs.setString("userSlug", userSlug);
           await Constants.prefs.setString("userEmail", userEmail);
           await Constants.prefs.setString("userName", userName);
+          await Constants.prefs.setString("userImage", image_url);
           await Constants.prefs.setBool("isLoggedIn", true);
           print("Login successful!");
           print("Token: $token");

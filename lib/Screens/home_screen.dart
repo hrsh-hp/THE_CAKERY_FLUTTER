@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        ScrollAction.getDirectionalIncrement(ScrollableState., intent)
+                        // ScrollAction.getDirectionalIncrement(ScrollableState., intent)
                       },
                       child: Text(
                         "View all",
@@ -66,20 +66,23 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return GridView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.8,
-                  ),
-                  itemCount: 7,
-                  itemBuilder: (context, index) {
-                    return _buildCakeItem();
+                  builder: (context, constraints) {
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.8,
+                          ),
+                      itemCount: 7,
+                      itemBuilder: (context, index) {
+                        return _buildCakeItem();
+                      },
+                    );
                   },
                 ),
               ),

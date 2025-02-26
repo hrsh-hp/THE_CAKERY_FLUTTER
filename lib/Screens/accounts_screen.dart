@@ -12,6 +12,7 @@ class AccountsScreen extends StatefulWidget {
 class _AccountsScreenState extends State<AccountsScreen> {
   String _userName = "Loading...";
   String _userEmail = "Loading...";
+  String? _profilePicture;
 
   @override
   void initState() {
@@ -24,6 +25,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     setState(() {
       _userName = Constants.prefs.getString('userName') ?? "-";
       _userEmail = Constants.prefs.getString('userEmail') ?? "-";
+      _profilePicture = Constants.prefs.getString('userImage');
     });
   }
 
@@ -45,7 +47,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
               onPressed: () async {
                 Navigator.pop(context);
                 await Constants.prefs.remove('token');
-                await Constants.prefs.remove('slug');
+                await Constants.prefs.remove('userSlug');
+                await Constants.prefs.remove('userName');
+                await Constants.prefs.remove('userEmail');
+                await Constants.prefs.remove('userImage');
+                await Constants.prefs.setBool("isLoggedIn", false);
 
                 Navigator.pushNamedAndRemoveUntil(
                   context,
@@ -71,7 +77,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
             accountEmail: Text(_userEmail),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.surfaceDim,
-              child: const Icon(Icons.person, size: 50, color: Colors.brown),
+              backgroundImage:
+                  _profilePicture != null
+                      ? NetworkImage(_profilePicture!) // Load profile picture
+                      : null,
+              child:
+                  _profilePicture == null
+                      ? const Icon(Icons.person, size: 50, color: Colors.brown)
+                      : null,
             ),
           ),
           ListTile(
@@ -83,6 +96,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
             onTap: () {
               // Navigator.pop(context); // Close drawer
+              Navigator.pushNamed(context, "/editprofile");
               // Navigate to edit profile screen (if required)
             },
           ),
