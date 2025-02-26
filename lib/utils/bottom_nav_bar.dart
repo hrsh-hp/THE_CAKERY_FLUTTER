@@ -42,8 +42,16 @@ class BottomNavBar extends StatelessWidget {
     if (index == 4) {
       // Open the drawer instead of navigating
       scaffoldKey?.currentState?.openDrawer();
+    } else if (index == 0) {
+      // Use pushReplacementNamed for index 1 (replace current screen)
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        _routes[index],
+        (route) => false,
+      );
     } else {
-      Navigator.pushReplacementNamed(context, _routes[index]);
+      // Use pushNamed for all other indices (allow back navigation)
+      Navigator.pushNamed(context, _routes[index]);
     }
   }
 
