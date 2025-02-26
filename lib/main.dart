@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:the_cakery/Screens/cart_screen.dart';
 import 'package:the_cakery/Screens/edit_profile.dart';
 import 'package:the_cakery/Screens/home_screen.dart';
 import 'package:the_cakery/Screens/initial.dart';
@@ -37,6 +38,8 @@ class MyApp extends StatelessWidget {
             return NavigationUtils.fadeRoute(const HomeScreen());
           case "/orders":
             return NavigationUtils.fadeRoute(OrdersScreen());
+          case "/cart":
+            return NavigationUtils.fadeRoute(CartScreen());
           case "/editprofile":
             return NavigationUtils.slideRoute(EditProfileScreen());
         }
