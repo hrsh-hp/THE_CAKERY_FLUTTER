@@ -106,6 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   basePrice: cake["price"],
                   description: cake["description"],
                   initialLikes: cake["likes"],
+                  isLiked: cake["isLiked"],
                 ),
           ),
         );
@@ -142,7 +143,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.favorite, size: 16, color: Colors.red),
+                          cake['isLiked']
+                              ? Icon(
+                                Icons.favorite,
+                                size: 16,
+                                color: Colors.red,
+                              )
+                              : Icon(
+                                Icons.favorite_outline,
+                                size: 16,
+                                color: Colors.red,
+                              ),
                           SizedBox(width: 2),
                           Text("${cake["likes"]}"),
                         ],
@@ -174,6 +185,7 @@ final List<Map<String, dynamic>> cakes = [
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
     "price": 799.0,
     "description": "A rich and creamy chocolate cake.",
+    "isLiked": true,
     "likes": 99,
   },
   {
@@ -182,6 +194,7 @@ final List<Map<String, dynamic>> cakes = [
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR2WykAyo-XM2T6eu3T8xM6yIlBygrzcfxAw&s",
     "price": 699.0,
     "description": "A soft vanilla cake with smooth frosting.",
+    "isLiked": false,
     "likes": 85,
   },
   // More cakes can be added here

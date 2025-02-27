@@ -7,8 +7,9 @@ class CakeCustomScreen extends StatefulWidget {
   final String description;
   final int initialLikes;
   final String? slug;
+  bool isLiked;
 
-  const CakeCustomScreen({
+  CakeCustomScreen({
     super.key,
     required this.cakeName,
     required this.imageUrl,
@@ -16,6 +17,7 @@ class CakeCustomScreen extends StatefulWidget {
     required this.description,
     required this.initialLikes,
     this.slug,
+    required this.isLiked,
   });
 
   @override
@@ -77,9 +79,22 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                     Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.favorite, color: Colors.red),
+                          icon:
+                              widget.isLiked
+                                  ? Icon(Icons.favorite, color: Colors.red)
+                                  : Icon(
+                                    Icons.favorite_outline,
+                                    color: Colors.red,
+                                  ),
                           onPressed: () {
-                            setState(() => likes++);
+                            setState(() {
+                              if (widget.isLiked) {
+                                likes--;
+                              } else {
+                                likes++;
+                              }
+                              widget.isLiked = !widget.isLiked;
+                            });
                           },
                         ),
                         Text("$likes"),
