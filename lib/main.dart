@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:the_cakery/Screens/cart_screen.dart';
+import 'package:the_cakery/Screens/delivery_review_screen.dart';
 import 'package:the_cakery/Screens/edit_profile.dart';
 import 'package:the_cakery/Screens/favourites_screen.dart';
 import 'package:the_cakery/Screens/home_screen.dart';
@@ -45,6 +46,8 @@ class MyApp extends StatelessWidget {
             return NavigationUtils.fadeRoute(FavoritesScreen());
           case "/editprofile":
             return NavigationUtils.slideRoute(EditProfileScreen());
+          case "/deliveryreview":
+            return NavigationUtils.slideRoute(DeliveryReviewScreen());
         }
       },
     );

@@ -108,30 +108,36 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   "Choose Size",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Column(
+                Wrap(
+                  spacing: 8.0,
                   children:
                       sizeOptions.keys.map((size) {
-                        int index = sizeOptions.keys.toList().indexOf(size);
-                        return Column(
-                          children: [
-                            RadioListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                "$size - ₹${sizeOptions[size]!.toStringAsFixed(2)}",
-                              ),
-                              value: size,
-                              groupValue: selectedSize,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedSize = value.toString();
-                                  selectedPrice = sizeOptions[value]!;
-                                });
-                              },
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4.0,
+                          ), // Adds spacing between chips
+                          child: ChoiceChip(
+                            label: Text(
+                              "$size - ₹${sizeOptions[size]!.toStringAsFixed(2)}",
                             ),
-                            if (index < sizeOptions.length - 1)
-                              Divider(thickness: 0.5, height: 1),
-                          ],
+                            selected: selectedSize == size,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  selectedSize = size;
+                                  selectedPrice = sizeOptions[size]!;
+                                });
+                              }
+                            },
+                            selectedColor:
+                                Colors.brown, // Change to your theme color
+                            labelStyle: TextStyle(
+                              color:
+                                  selectedSize == size
+                                      ? Colors.white
+                                      : Colors.black,
+                            ),
+                          ),
                         );
                       }).toList(),
                 ),
@@ -140,33 +146,39 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   "Select Toppings",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Column(
+                Wrap(
+                  spacing: 8.0,
                   children:
                       toppings.map((topping) {
-                        int index = toppings.indexOf(topping);
-                        return Column(
-                          children: [
-                            CheckboxListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(topping),
-                              value: selectedToppings.contains(topping),
-                              onChanged: (value) {
-                                setState(() {
-                                  if (value == true) {
-                                    selectedToppings.add(topping);
-                                  } else {
-                                    selectedToppings.remove(topping);
-                                  }
-                                });
-                              },
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4.0,
+                          ), // Adds spacing between chips
+                          child: ChoiceChip(
+                            label: Text(topping),
+                            selected: selectedToppings.contains(topping),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  selectedToppings.add(topping);
+                                } else {
+                                  selectedToppings.remove(topping);
+                                }
+                              });
+                            },
+                            selectedColor:
+                                Colors.brown, // Change to your theme color
+                            labelStyle: TextStyle(
+                              color:
+                                  selectedToppings.contains(topping)
+                                      ? Colors.white
+                                      : Colors.black,
                             ),
-                            if (index < toppings.length - 1)
-                              Divider(thickness: 0.5, height: 5),
-                          ],
+                          ),
                         );
                       }).toList(),
                 ),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

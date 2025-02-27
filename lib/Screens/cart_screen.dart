@@ -300,8 +300,12 @@ class _CartScreenState extends State<CartScreen> {
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.symmetric(vertical: 15),
           textStyle: TextStyle(fontSize: 18),
+          backgroundColor: Colors.brown,
         ),
-        child: Text("Place Order"),
+        child: Text(
+          "Place Order",
+          style: TextStyle(color: Theme.of(context).colorScheme.surfaceBright),
+        ),
       ),
     );
   }
