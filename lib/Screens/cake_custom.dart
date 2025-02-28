@@ -44,6 +44,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     super.initState();
     likes = widget.initialLikes;
     selectedPrice = widget.basePrice;
+    sizeOptions['Medium'] = widget.basePrice;
   }
 
   @override

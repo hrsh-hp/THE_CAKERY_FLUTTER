@@ -98,7 +98,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(title: Text("My Orders")),
+      appBar: AppBar(
+        title: Text("My Orders"),
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back), // Custom back button
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+        ),
+      ),
       bottomNavigationBar: BottomNavBar(
         selectedIndex: 1,
         scaffoldKey: _scaffoldKey,

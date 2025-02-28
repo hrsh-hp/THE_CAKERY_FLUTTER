@@ -29,13 +29,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           "isLiked": true,
         },
         {
-          "id": 2,
-          "name": "Vanilla Cake",
-          "imageUrl":
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-          "isLiked": true,
-        },
-        {
           "id": 3,
           "name": "Red Velvet Cake",
           "imageUrl":

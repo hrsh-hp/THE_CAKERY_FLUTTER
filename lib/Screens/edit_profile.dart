@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:the_cakery/utils/constants.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,7 +17,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   TextEditingController _firstNameController = TextEditingController();
   TextEditingController _lastNameController = TextEditingController();
   TextEditingController _phoneController = TextEditingController();
-  TextEditingController _emailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController(
+    text: Constants.prefs.getString("userEmail"),
+  );
   TextEditingController _addressController = TextEditingController();
   File? _profileImage;
 
@@ -61,6 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: Text("Edit Profile")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(
@@ -158,6 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         labelText: "Email",
                         // border: OutlineInputBorder(),
                       ),
+                      // initialValue: ,
                       enabled: false,
                     ),
 

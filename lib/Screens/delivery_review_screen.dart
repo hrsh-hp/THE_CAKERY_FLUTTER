@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DeliveryReviewScreen extends StatefulWidget {
-  final String deliveryPerson = "John Doe";
+  final String deliveryPerson = "Heinrich Klaasen ";
 
   DeliveryReviewScreen();
 
