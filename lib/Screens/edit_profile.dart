@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:the_cakery/Screens/edit_address.dart';
 import 'package:the_cakery/utils/constants.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -167,11 +168,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
 
                     SizedBox(height: 15),
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: InputDecoration(labelText: "Address"),
-                      validator:
-                          (value) => value!.isEmpty ? "Enter address" : null,
+                    SizedBox(height: 15),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Address",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    _addressController.text.isEmpty
+                                        ? "No address added"
+                                        : _addressController.text,
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.edit,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              onPressed: () {
+                                // Navigate to edit address screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => EditAddressScreen(
+                                          initialAddress:
+                                              _addressController.text,
+                                          onSave: (newAddress) {
+                                            setState(() {
+                                              _addressController.text =
+                                                  newAddress;
+                                            });
+                                          },
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
 
                     SizedBox(height: 20),

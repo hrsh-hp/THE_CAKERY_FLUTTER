@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:the_cakery/Screens/cart_screen.dart';
 import 'package:the_cakery/Screens/delivery_review_screen.dart';
 import 'package:the_cakery/Screens/edit_profile.dart';
@@ -8,17 +9,34 @@ import 'package:the_cakery/Screens/initial.dart';
 import 'package:the_cakery/Screens/login.dart';
 import 'package:the_cakery/Screens/orders_screen.dart';
 import 'package:the_cakery/Screens/register.dart';
-import 'package:the_cakery/utils/bottom_nav_bar.dart';
+// import 'package:the_cakery/utils/bottom_nav_bar.dart';
 import 'package:the_cakery/utils/constants.dart';
 import 'package:the_cakery/utils/navigations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // await dotenv.load();
+  await dotenv.load(fileName: ".env");
+  // print("API Key: ${dotenv.env['GOOGLE_MAPS_API_KEY'] ?? 'Not Found'}");
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    const platform = MethodChannel('google_maps');
+    try {
+      await platform.invokeMethod(
+        'setApiKey',
+        dotenv.env['GOOGLE_MAPS_API_KEY'],
+      );
+      print("✅ Google Maps API Key sent to iOS.");
+    } catch (e) {
+      print("❌ Error sending API Key to iOS: $e");
+    }
+  });
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {

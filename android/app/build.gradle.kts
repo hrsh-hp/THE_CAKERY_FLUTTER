@@ -5,6 +5,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.*
+
+val dotenv = Properties()
+val envFile = rootProject.file(".env")
+
+if (envFile.exists()) {
+    dotenv.load(envFile.inputStream()) // Corrected way to load .env
+}
+
 android {
     namespace = "com.example.the_cakery"
     compileSdk = flutter.compileSdkVersion
@@ -28,7 +37,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-    }
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = dotenv.getProperty("GOOGLE_MAPS_API_KEY", "")
+    }   
 
     buildTypes {
         release {
