@@ -4,11 +4,15 @@ import 'package:location/location.dart';
 
 class EditAddressScreen extends StatefulWidget {
   final String initialAddress;
-  final Function(String) onSave;
+  final Function(String, double, double) onSave;
+  final double initialLongitude;
+  final double initialLatitude;
 
   const EditAddressScreen({
     Key? key,
     required this.initialAddress,
+    required this.initialLongitude,
+    required this.initialLatitude,
     required this.onSave,
   }) : super(key: key);
 
@@ -19,7 +23,7 @@ class EditAddressScreen extends StatefulWidget {
 class _EditAddressScreenState extends State<EditAddressScreen> {
   late TextEditingController _addressController;
   GoogleMapController? _mapController;
-  LatLng _selectedLocation = LatLng(0, 0); // Default location
+  late LatLng _selectedLocation; // Default location
   bool _isMapReady = false;
   Set<Marker> _markers = {};
 
@@ -27,7 +31,14 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
   void initState() {
     super.initState();
     _addressController = TextEditingController(text: widget.initialAddress);
-    _getCurrentLocation();
+    _selectedLocation = LatLng(widget.initialLatitude, widget.initialLongitude);
+    print("Initial Location: $_selectedLocation");
+    if (widget.initialLatitude == 0.0 && widget.initialLongitude == 0.0) {
+      _getCurrentLocation();
+    } else {
+      _isMapReady = true;
+      _updateMarker();
+    }
   }
 
   @override
@@ -83,9 +94,6 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
         onDragEnd: (newPosition) {
           setState(() {
             _selectedLocation = newPosition;
-            print(
-              'Selected Location: ${_selectedLocation.latitude}, ${_selectedLocation.longitude}',
-            );
           });
         },
       ),
@@ -137,8 +145,8 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
               maxLines: 3,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               "Or select location on map:",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -188,9 +196,10 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
             child: ElevatedButton(
               onPressed: () {
                 // Save both the text address and coordinates
-                widget.onSave(_addressController.text);
-                print(
-                  'Saving location: ${_selectedLocation.latitude}, ${_selectedLocation.longitude}',
+                widget.onSave(
+                  _addressController.text,
+                  _selectedLocation.longitude,
+                  _selectedLocation.latitude,
                 );
                 Navigator.pop(context);
               },

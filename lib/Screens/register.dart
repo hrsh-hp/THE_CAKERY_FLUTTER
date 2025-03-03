@@ -1,6 +1,8 @@
-import "package:flutter/material.dart";
-import "package:the_cakery/utils/constants.dart";
-import "package:the_cakery/utils/validators.dart";
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:the_cakery/utils/constants.dart';
+import 'package:the_cakery/utils/validators.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,23 +21,63 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isPasswordVisible = false;
   bool _isCnfPassVisible = false;
 
-  void _register() {
-    if (_formKey.currentState!.validate()) {
-      String email = _emailController.text.trim();
-      String password = _passwordController.text.trim();
-      print(email + password);
-      Navigator.pop(context);
+  // Replace with your actual Django API URL
+  final String _registerUrl = "${Constants.baseUrl}/auth/register/";
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    try {
+      final response = await http.post(
+        Uri.parse(_registerUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 &&
+          responseData["data"]["success"] == true) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("User registered successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to Login screen after success
+        Navigator.pop(context);
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData["message"] ?? "Registration failed"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (error) {
+      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Something went wrong. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(title: Text("Login"), centerTitle: true),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFFDF3E7), Color(0xFFEED6C4)],
             begin: Alignment.topCenter,
@@ -64,7 +106,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       const SizedBox(height: 25),
-                      Text(
+                      const Text(
                         "Welcome,",
                         textAlign: TextAlign.left,
                         style: TextStyle(
@@ -72,7 +114,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
+                      const Text(
                         "Register Yourself here",
                         textAlign: TextAlign.left,
                         style: TextStyle(
@@ -82,18 +124,17 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       const SizedBox(height: 15),
-                      //Email field is here
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           labelText: "Email",
-                          prefixIcon: Icon(Icons.email),
+                          prefixIcon: const Icon(Icons.email),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                           hintText: "Enter your email",
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             vertical: 12,
                             horizontal: 15,
                           ),
@@ -101,13 +142,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         validator: Validators.validateEmail,
                       ),
                       const SizedBox(height: 15),
-                      //Password field is here
                       TextFormField(
                         controller: _passwordController,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           labelText: "Password",
-                          prefixIcon: Icon(Icons.lock),
+                          prefixIcon: const Icon(Icons.lock),
                           suffixIcon: IconButton(
                             onPressed: () {
                               setState(() {
@@ -123,7 +163,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             vertical: 12,
                             horizontal: 15,
                           ),
@@ -132,15 +172,13 @@ class _SignupScreenState extends State<SignupScreen> {
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 15),
-
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: !_isCnfPassVisible,
-                        textInputAction:
-                            TextInputAction.done, // Pressing enter submits form
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           labelText: "Confirm Password",
-                          prefixIcon: Icon(Icons.lock_outline),
+                          prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             onPressed: () {
                               setState(() {
@@ -157,8 +195,6 @@ class _SignupScreenState extends State<SignupScreen> {
                             borderRadius: BorderRadius.circular(15),
                           ),
                         ),
-
-                        // ✅ Confirm Password Validation
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "Please confirm your password";
@@ -168,37 +204,34 @@ class _SignupScreenState extends State<SignupScreen> {
                           }
                           return null;
                         },
-
-                        // ✅ Pressing Enter submits the form
                         onFieldSubmitted: (value) => _register(),
                       ),
                       const SizedBox(height: 20),
-
                       ElevatedButton(
                         onPressed: _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
-                          minimumSize: Size(double.infinity, 50),
+                          minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: Text(
+                        child: const Text(
                           "Sign Up",
                           style: TextStyle(color: Colors.white, fontSize: 17),
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Already have an account?"),
+                          const Text("Already have an account?"),
                           TextButton(
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            child: Text(
+                            child: const Text(
                               "Sign In",
                               style: TextStyle(fontSize: 15),
                             ),
