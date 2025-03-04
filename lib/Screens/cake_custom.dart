@@ -1,220 +1,295 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:the_cakery/utils/constants.dart';
 
 class CakeCustomScreen extends StatefulWidget {
-  final String cakeName;
-  final String imageUrl;
-  final double basePrice;
-  final String description;
-  final int initialLikes;
-  final String? slug;
-  bool isLiked;
+  final String slug;
 
-  CakeCustomScreen({
-    super.key,
-    required this.cakeName,
-    required this.imageUrl,
-    required this.basePrice,
-    required this.description,
-    required this.initialLikes,
-    this.slug,
-    required this.isLiked,
-  });
+  CakeCustomScreen({super.key, required this.slug});
 
   @override
   State<CakeCustomScreen> createState() => _CakeCustomScreenState();
 }
 
 class _CakeCustomScreenState extends State<CakeCustomScreen> {
+  bool isLoading = true;
+  bool isLiked = false;
+  bool availableToppings = true;
   int likes = 0;
   int quantity = 1;
   String selectedSize = "Medium";
   double selectedPrice = 0.0;
   List<String> selectedToppings = [];
+  String cakeName = "";
+  String imageUrl = "";
+  String description = "";
+  Map<String, double> sizeOptions = {};
 
-  final Map<String, double> sizeOptions = {
-    "Small": 499.0,
-    "Medium": 799.0,
-    "Large": 1199.0,
-  };
-
-  final List<String> toppings = ["Choco Chips", "Nuts", "Sprinkles", "Fruits"];
+  // final List<String> toppings = ["Choco Chips", "Nuts", "Sprinkles", "Fruits"];
 
   @override
   void initState() {
     super.initState();
-    likes = widget.initialLikes;
-    selectedPrice = widget.basePrice;
-    sizeOptions['Medium'] = widget.basePrice;
+    print("Received slug: ${widget.slug}"); // Debugging
+    fetchCakeDetails(); // If applicable
+  }
+
+  Future<void> fetchCakeDetails() async {
+    String token = Constants.prefs.getString("token") ?? "";
+
+    final url = Uri.parse("${Constants.baseUrl}/cake/full_cake/${widget.slug}");
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Token $token",
+          "Content-Type": "application/json",
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)["data"];
+        setState(() {
+          cakeName = data["name"];
+          imageUrl = data["image_url"];
+          description = data["description"];
+          isLiked = data["liked"];
+          likes = data["likes_count"];
+          availableToppings = data["available_toppings"];
+          sizeOptions = {
+            for (var size in data["sizes"])
+              size["size"]: double.parse(size["price"]),
+          };
+          selectedPrice = sizeOptions[selectedSize] ?? 0.0;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching cake details: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.cakeName)),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Image.network(
-                    widget.imageUrl,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, isLiked); // Pass updated like status
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(cakeName.isNotEmpty ? cakeName : "Loading..."),
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.cakeName,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Center(
+                      child:
+                          imageUrl.isNotEmpty
+                              ? Image.network(
+                                imageUrl,
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.broken_image,
+                                    size: 100,
+                                    color: Colors.grey,
+                                  );
+                                },
+                              )
+                              : Icon(
+                                Icons.image,
+                                size: 100,
+                                color: Colors.grey,
+                              ),
                     ),
+                    SizedBox(height: 10),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon:
-                              widget.isLiked
-                                  ? Icon(Icons.favorite, color: Colors.red)
-                                  : Icon(
-                                    Icons.favorite_outline,
-                                    color: Colors.red,
-                                  ),
-                          onPressed: () {
-                            setState(() {
-                              if (widget.isLiked) {
-                                likes--;
-                              } else {
-                                likes++;
-                              }
-                              widget.isLiked = !widget.isLiked;
-                            });
-                          },
+                        Text(
+                          cakeName,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        Text("$likes"),
-                      ],
-                    ),
-                  ],
-                ),
-                Text(widget.description, style: TextStyle(fontSize: 16)),
-                SizedBox(height: 20),
-                Text(
-                  "Choose Size",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Wrap(
-                  spacing: 8.0,
-                  children:
-                      sizeOptions.keys.map((size) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4.0,
-                          ), // Adds spacing between chips
-                          child: ChoiceChip(
-                            label: Text(
-                              "$size - ₹${sizeOptions[size]!.toStringAsFixed(2)}",
-                            ),
-                            selected: selectedSize == size,
-                            onSelected: (selected) {
-                              if (selected) {
+                        Row(
+                          children: [
+                            IconButton(
+                              icon:
+                                  isLiked
+                                      ? Icon(Icons.favorite, color: Colors.red)
+                                      : Icon(
+                                        Icons.favorite_outline,
+                                        color: Colors.red,
+                                      ),
+                              onPressed: () async {
                                 setState(() {
-                                  selectedSize = size;
-                                  selectedPrice = sizeOptions[size]!;
+                                  isLiked = !isLiked;
+                                  likes += isLiked ? 1 : -1;
                                 });
-                              }
-                            },
-                            selectedColor:
-                                Colors.brown, // Change to your theme color
-                            labelStyle: TextStyle(
-                              color:
-                                  selectedSize == size
-                                      ? Colors.white
-                                      : Colors.black,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                ),
-                SizedBox(height: 20),
-                Text(
-                  "Select Toppings",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Wrap(
-                  spacing: 8.0,
-                  children:
-                      toppings.map((topping) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4.0,
-                          ), // Adds spacing between chips
-                          child: ChoiceChip(
-                            label: Text(topping),
-                            selected: selectedToppings.contains(topping),
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  selectedToppings.add(topping);
-                                } else {
-                                  selectedToppings.remove(topping);
-                                }
-                              });
-                            },
-                            selectedColor:
-                                Colors.brown, // Change to your theme color
-                            labelStyle: TextStyle(
-                              color:
-                                  selectedToppings.contains(topping)
-                                      ? Colors.white
-                                      : Colors.black,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                ),
+                                try {
+                                  final response = await http.post(
+                                    Uri.parse(
+                                      '${Constants.baseUrl}/cake/like/',
+                                    ), // Replace with your API URL
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization':
+                                          'Token ${Constants.prefs.getString("token")}', // Add authentication
+                                    },
+                                    body: jsonEncode({
+                                      'cake_slug': widget.slug,
+                                      'liked': isLiked,
+                                    }),
+                                  );
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Quantity"),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.remove),
-                          onPressed:
-                              quantity > 1
-                                  ? () {
-                                    setState(() => quantity--);
+                                  if (response.statusCode != 200) {
+                                    throw Exception(
+                                      "Failed to update like status",
+                                    );
                                   }
-                                  : null,
-                        ),
-                        Text("$quantity"),
-                        IconButton(
-                          icon: Icon(Icons.add),
-                          onPressed: () {
-                            setState(() => quantity++);
-                          },
+                                } catch (e) {
+                                  setState(() {
+                                    isLiked =
+                                        !isLiked; // Revert UI if request fails
+                                  });
+                                  print("Error: $e");
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Error updating like status",
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            Text("$likes"),
+                          ],
                         ),
                       ],
                     ),
+                    Text(description, style: TextStyle(fontSize: 16)),
+                    SizedBox(height: 20),
+                    Text(
+                      "Choose Size",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Wrap(
+                      spacing: 8.0,
+                      children:
+                          sizeOptions.keys.map((size) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4.0,
+                              ), // Adds spacing between chips
+                              child: ChoiceChip(
+                                label: Text(
+                                  "$size - ₹${sizeOptions[size]!.toStringAsFixed(2)}",
+                                ),
+                                selected: selectedSize == size,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      selectedSize = size;
+                                      selectedPrice = sizeOptions[size]!;
+                                    });
+                                  }
+                                },
+                                selectedColor:
+                                    Colors.brown, // Change to your theme color
+                                labelStyle: TextStyle(
+                                  color:
+                                      selectedSize == size
+                                          ? Colors.white
+                                          : Colors.black,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      "Select Toppings",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Wrap(
+                      spacing: 8.0,
+                      children:
+                          ["Choco Chips", "Nuts", "Sprinkles", "Fruits"].map((
+                            topping,
+                          ) {
+                            return ChoiceChip(
+                              label: Text(topping),
+                              selected: selectedToppings.contains(topping),
+                              onSelected:
+                                  availableToppings
+                                      ? (selected) {
+                                        setState(() {
+                                          if (selected) {
+                                            selectedToppings.add(topping);
+                                          } else {
+                                            selectedToppings.remove(topping);
+                                          }
+                                        });
+                                      }
+                                      : null, // Disables the chip when availableToppings is false
+                              selectedColor: Colors.brown,
+                              disabledColor:
+                                  Colors
+                                      .grey[300], // Light grey to indicate disabled
+                              labelStyle: TextStyle(
+                                color:
+                                    selectedToppings.contains(topping)
+                                        ? Colors.white
+                                        : Colors.black,
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                    // SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Quantity"),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed:
+                                  quantity > 1
+                                      ? () {
+                                        setState(() => quantity--);
+                                      }
+                                      : null,
+                            ),
+                            Text("$quantity"),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              onPressed: () {
+                                setState(() => quantity++);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    // SizedBox(height: 35),
                   ],
                 ),
-                SizedBox(height: 35),
-              ],
+              ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SizedBox(
+            SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
@@ -222,7 +297,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        "Added ${widget.cakeName} ($selectedSize) x $quantity to cart!",
+                        "Added ${cakeName} ($selectedSize) x $quantity to cart!",
                       ),
                     ),
                   );
@@ -243,8 +318,8 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -193,22 +193,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCakeItem(BuildContext context, Map<String, dynamic> cake) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => CakeCustomScreen(
-                  // cakeName: cake["name"],
-                  // imageUrl: cake["image_url"],
-                  // basePrice: cake["price"],
-                  // description: cake["description"],
-                  // initialLikes: cake["likes_count"],
-                  // isLiked: cake["liked"],
-                  slug: cake["slug"], // Pass slug here
-                ),
-          ),
-        );
+      onTap: () async {
+        try {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CakeCustomScreen(slug: cake["slug"]),
+            ),
+          );
+          if (result != null) {
+            fetchCakes();
+          }
+        } catch (e) {
+          print("Navigation error: $e");
+        }
       },
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
