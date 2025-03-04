@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:the_cakery/Screens/accounts_screen.dart';
 import 'package:the_cakery/Screens/cake_custom.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
+import 'package:the_cakery/utils/constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +15,45 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  List<Map<String, dynamic>> cakes = [];
+  bool isLoading = true;
+  bool hasError = false; // to handle API errors
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCakes();
+  }
+
+  Future<void> fetchCakes() async {
+    String token = Constants.prefs.getString("token") ?? "";
+    try {
+      final response = await http.get(
+        Uri.parse("${Constants.baseUrl}/cake/home_cake"),
+        headers: {
+          "Authorization": "Token $token",
+          "Content-Type": "application/json",
+        },
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body)['data'];
+        setState(() {
+          cakes = data.cast<Map<String, dynamic>>(); // Convert to List<Map>
+          isLoading = false;
+          print("cakes $cakes");
+        });
+      } else {
+        throw Exception("Failed to load cakes");
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        print("error here $e");
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,26 +108,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.8,
-                        ),
-                    itemCount: cakes.length,
-                    itemBuilder: (context, index) {
-                      return _buildCakeItem(context, cakes[index]);
-                    },
-                  );
-                },
-              ),
+              child:
+                  isLoading
+                      ? _buildLoadingShimmer() // Show Skeleton while loading
+                      : hasError
+                      ? Center(
+                        child: Text("Failed to load data. Please try again."),
+                      )
+                      : _buildCakeGrid(),
             ),
           ],
         ),
@@ -92,21 +123,89 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildLoadingShimmer() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: 4, // Show 4 shimmer items
+      itemBuilder: (context, index) {
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 3,
+          child: Column(
+            children: [
+              Container(
+                height: 120,
+                color: Colors.grey[300],
+              ), // Image placeholder
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 16,
+                      width: 100,
+                      color: Colors.grey[300],
+                    ), // Name
+                    const SizedBox(height: 5),
+                    Container(
+                      height: 14,
+                      width: 50,
+                      color: Colors.grey[300],
+                    ), // Price
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCakeGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: cakes.length,
+      itemBuilder: (context, index) {
+        return _buildCakeItem(context, cakes[index]);
+      },
+    );
+  }
+
   Widget _buildCakeItem(BuildContext context, Map<String, dynamic> cake) {
     return GestureDetector(
-      onTap: () async {
-        // In the future, replace this with API call to getCakeDetails
+      onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder:
                 (context) => CakeCustomScreen(
-                  cakeName: cake["name"],
-                  imageUrl: cake["image"],
-                  basePrice: cake["price"],
-                  description: cake["description"],
-                  initialLikes: cake["likes"],
-                  isLiked: cake["isLiked"],
+                  // cakeName: cake["name"],
+                  // imageUrl: cake["image_url"],
+                  // basePrice: cake["price"],
+                  // description: cake["description"],
+                  // initialLikes: cake["likes_count"],
+                  // isLiked: cake["liked"],
+                  slug: cake["slug"], // Pass slug here
                 ),
           ),
         );
@@ -122,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: Radius.circular(10),
               ),
               child: Image.network(
-                cake["image"],
+                cake["image_url"],
                 height: 120,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -135,32 +234,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     cake["name"],
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
-                          cake['isLiked']
-                              ? Icon(
+                          cake['liked']
+                              ? const Icon(
                                 Icons.favorite,
                                 size: 16,
                                 color: Colors.red,
                               )
-                              : Icon(
+                              : const Icon(
                                 Icons.favorite_outline,
                                 size: 16,
                                 color: Colors.red,
                               ),
-                          SizedBox(width: 2),
-                          Text("${cake["likes"]}"),
+                          const SizedBox(width: 2),
+                          Text("${cake["likes_count"]}"),
                         ],
                       ),
                       Text(
-                        "₹${cake["price"].toStringAsFixed(2)}",
-                        style: TextStyle(
+                        "₹${cake["price"]}",
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -176,26 +278,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-// Static Data (Replace Later with API Call)
-final List<Map<String, dynamic>> cakes = [
-  {
-    "name": "Chocolate Cake",
-    "image":
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-    "price": 799.0,
-    "description": "A rich and creamy chocolate cake.",
-    "isLiked": true,
-    "likes": 99,
-  },
-  {
-    "name": "Vanilla Delight",
-    "image":
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR2WykAyo-XM2T6eu3T8xM6yIlBygrzcfxAw&s",
-    "price": 699.0,
-    "description": "A soft vanilla cake with smooth frosting.",
-    "isLiked": false,
-    "likes": 85,
-  },
-  // More cakes can be added here
-];
