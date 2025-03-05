@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:the_cakery/utils/constants.dart';
 
 class CakeCustomScreen extends StatefulWidget {
+  // final Function(String, bool) onLikeUpdate;
   final String slug;
 
   CakeCustomScreen({super.key, required this.slug});
@@ -26,7 +27,9 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
   String cakeName = "";
   String imageUrl = "";
   String description = "";
-  Map<String, double> sizeOptions = {};
+  String cakeSlug = "";
+  String selectedSizeSlug = "";
+  Map<String, Map<String, dynamic>> sizeOptions = {};
 
   // final List<String> toppings = ["Choco Chips", "Nuts", "Sprinkles", "Fruits"];
 
@@ -58,12 +61,20 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
           isLiked = data["liked"];
           initialLikeStatus = isLiked;
           likes = data["likes_count"];
+          cakeSlug = data["slug"];
           availableToppings = data["available_toppings"];
           sizeOptions = {
             for (var size in data["sizes"])
-              size["size"]: double.parse(size["price"]),
+              size["slug"]: {
+                "name": size["size"],
+                "price": double.parse(size["price"]),
+              },
           };
-          selectedPrice = sizeOptions[selectedSize] ?? 0.0;
+          selectedSizeSlug = sizeOptions.keys.first;
+          selectedSize =
+              sizeOptions[selectedSizeSlug]?["name"] ??
+              "Medium"; // Get size name
+          selectedPrice = sizeOptions[selectedSizeSlug]?["price"] ?? 0.0;
           isLoading = false;
         });
       }
@@ -72,14 +83,66 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     }
   }
 
+  //add to cart logic here
+  Future<void> addToCart(
+    BuildContext context,
+    String cakeSlug,
+    String sizeSlug,
+    int quantity,
+    double selectedPrice,
+    String cakeName,
+  ) async {
+    final String apiUrl = "${Constants.baseUrl}/cake/cart/add/";
+    final Map<String, dynamic> requestData = {
+      "cake_slug": cakeSlug,
+      "size_slug": sizeSlug,
+      "quantity": quantity,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Token ${Constants.prefs.getString("token")}",
+        },
+        body: jsonEncode(requestData),
+      );
+
+      final responseData = jsonDecode(response.body);
+      print("responseData: $responseData");
+
+      if (response.statusCode == 200 &&
+          responseData['data']["success"] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Added $cakeName (${sizeOptions[sizeSlug]!['name']}) x $quantity to cart!",
+            ),
+          ),
+        );
+      } else {
+        throw Exception(responseData["message"] ?? "Failed to add to cart");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pop(
-          context,
-          isLiked != initialLikeStatus,
-        ); // Pass updated like status
+        // widget.onLikeUpdate(widget.slug, isLiked);
+        Navigator.pop(context, {
+          "isLiked": isLiked,
+          "likes": likes,
+        }); // Pass updated like status
         return true;
       },
       child: Scaffold(
@@ -204,21 +267,26 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                     Wrap(
                       spacing: 8.0,
                       children:
-                          sizeOptions.keys.map((size) {
+                          sizeOptions.keys.map((sizeSlug) {
+                            final sizeName =
+                                sizeOptions[sizeSlug]?["name"] ?? "Unknown";
+                            final price =
+                                sizeOptions[sizeSlug]?["price"] ?? 0.0;
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 4.0,
-                              ), // Adds spacing between chips
+                              ),
                               child: ChoiceChip(
                                 label: Text(
-                                  "$size - ₹${sizeOptions[size]!.toStringAsFixed(2)}",
+                                  "$sizeName - ₹${price.toStringAsFixed(2)}",
                                 ),
-                                selected: selectedSize == size,
+                                selected: selectedSizeSlug == sizeSlug,
                                 onSelected: (selected) {
                                   if (selected) {
                                     setState(() {
-                                      selectedSize = size;
-                                      selectedPrice = sizeOptions[size]!;
+                                      selectedSizeSlug = sizeSlug;
+                                      selectedSize = sizeName;
+                                      selectedPrice = price;
                                     });
                                   }
                                 },
@@ -226,7 +294,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                     Colors.brown, // Change to your theme color
                                 labelStyle: TextStyle(
                                   color:
-                                      selectedSize == size
+                                      selectedSizeSlug == sizeSlug
                                           ? Colors.white
                                           : Colors.black,
                                 ),
@@ -308,14 +376,15 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Add to Cart Logic
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        "Added ${cakeName} ($selectedSize) x $quantity to cart!",
-                      ),
-                    ),
+                onPressed: () async {
+                  // Call API
+                  await addToCart(
+                    context,
+                    cakeSlug,
+                    selectedSizeSlug,
+                    quantity,
+                    selectedPrice,
+                    cakeName,
                   );
                 },
                 style: ElevatedButton.styleFrom(

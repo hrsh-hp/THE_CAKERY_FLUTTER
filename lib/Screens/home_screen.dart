@@ -26,13 +26,12 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchCakes();
   }
 
-  void _updateLikedStatus(String cakeSlug, bool isLiked) {
+  void _updateLikedStatus(String slug, bool isLiked, int likeCount) {
     setState(() {
-      int index = cakes.indexWhere((cake) => cake["slug"] == cakeSlug);
+      final index = cakes.indexWhere((cake) => cake["slug"] == slug);
       if (index != -1) {
         cakes[index]["liked"] = isLiked;
-        print("likescount ${cakes[index]["likes_count"]}"); // Update like count
-        cakes[index]["likes_count"] += isLiked ? 1 : -1;
+        cakes[index]["likes_count"] = likeCount; // Update like count
       }
     });
   }
@@ -206,15 +205,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         try {
-          final isUpdated = await Navigator.push(
+          final Map<String, dynamic>? result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => CakeCustomScreen(slug: cake["slug"]),
             ),
           );
-          if (isUpdated == true) {
-            // Instead of fetching all favorites again, update the specific item
-            _updateLikedStatus(cake["slug"]);
+
+          if (result != null) {
+            final bool newLikedStatus = result["isLiked"];
+            final int newLikeCount = result["likes"];
+
+            // Only update if there is a change in like status or like count
+            if (cake["liked"] != newLikedStatus ||
+                cake["likes_count"] != newLikeCount) {
+              _updateLikedStatus(cake["slug"], newLikedStatus, newLikeCount);
+            }
           }
         } catch (e) {
           print("Navigation error: $e");

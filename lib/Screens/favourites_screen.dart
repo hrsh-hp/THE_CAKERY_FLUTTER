@@ -217,15 +217,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           return GestureDetector(
             onTap: () async {
               try {
-                final isUpdated = await Navigator.push(
+                final Map<String, dynamic>? result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => CakeCustomScreen(slug: cake["slug"]),
                   ),
                 );
-                if (isUpdated == true) {
-                  // Instead of fetching all favorites again, update the specific item
-                  _updateLikedStatus(cake["slug"]);
+                print("result $result");
+                print("result ${cake['liked']}");
+                if (result != null) {
+                  final bool newLikedStatus = result["isLiked"];
+                  final int newLikeCount = result["likes"];
+                  print("newliked $newLikedStatus");
+                  // Only update if there is a change in like status or like count
+                  if (cake["liked"] != newLikedStatus) {
+                    _updateLikedStatus(cake["slug"]);
+                  }
                 }
               } catch (e) {
                 print("Navigation error: $e");
