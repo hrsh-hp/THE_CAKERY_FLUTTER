@@ -26,6 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchCakes();
   }
 
+  void _updateLikedStatus(String cakeSlug, bool isLiked) {
+    setState(() {
+      int index = cakes.indexWhere((cake) => cake["slug"] == cakeSlug);
+      if (index != -1) {
+        cakes[index]["liked"] = isLiked;
+        print("likescount ${cakes[index]["likes_count"]}"); // Update like count
+        cakes[index]["likes_count"] += isLiked ? 1 : -1;
+      }
+    });
+  }
+
   Future<void> fetchCakes() async {
     String token = Constants.prefs.getString("token") ?? "";
     try {
@@ -41,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           cakes = data.cast<Map<String, dynamic>>(); // Convert to List<Map>
           isLoading = false;
-          print("cakes $cakes");
+          // print("cakes $cakes");
         });
       } else {
         throw Exception("Failed to load cakes");
@@ -195,14 +206,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         try {
-          final result = await Navigator.push(
+          final isUpdated = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => CakeCustomScreen(slug: cake["slug"]),
             ),
           );
-          if (result != null) {
-            fetchCakes();
+          if (isUpdated == true) {
+            // Instead of fetching all favorites again, update the specific item
+            _updateLikedStatus(cake["slug"]);
           }
         } catch (e) {
           print("Navigation error: $e");

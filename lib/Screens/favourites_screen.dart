@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:the_cakery/Screens/accounts_screen.dart';
+import 'package:the_cakery/Screens/cake_custom.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
+import 'package:the_cakery/utils/constants.dart';
 
 class FavoritesScreen extends StatefulWidget {
   @override
@@ -11,6 +15,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<Map<String, dynamic>> favoriteCakes = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -18,42 +23,80 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     _fetchFavorites();
   }
 
-  void _fetchFavorites() {
+  void _updateLikedStatus(String cakeSlug) {
     setState(() {
-      favoriteCakes = [
-        {
-          "id": 1,
-          "name": "Chocolate Cake",
-          "imageUrl":
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-          "isLiked": true,
-        },
-        {
-          "id": 3,
-          "name": "Red Velvet Cake",
-          "imageUrl":
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-          "isLiked": true,
-        },
-      ];
+      int index = favoriteCakes.indexWhere((cake) => cake["slug"] == cakeSlug);
+      if (index != -1) {
+        favoriteCakes[index]["liked"] = !favoriteCakes[index]["liked"];
+      }
     });
   }
 
-  void _removeFromFavorites(int id) {
-    int index = favoriteCakes.indexWhere((cake) => cake["id"] == id);
+  void _fetchFavorites() async {
+    setState(() => isLoading = true); // Show loading skeleton
+    try {
+      var response = await http.get(
+        Uri.parse("${Constants.baseUrl}/cake/liked_cake"),
+        headers: {
+          "Authorization": "Token ${Constants.prefs.getString("token")}",
+        },
+      );
 
-    setState(() {
-      // favoriteCakes.removeWhere((cake) => cake["id"] == id);
-      favoriteCakes[index]['isLiked'] = !favoriteCakes[index]['isLiked'];
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            !favoriteCakes[index]['isLiked']
-                ? Text("Removed from favorites")
-                : Text("Added to favorites"),
-      ),
-    );
+      if (response.statusCode == 200) {
+        var jsonData = json.decode(response.body);
+        setState(() {
+          favoriteCakes = List<Map<String, dynamic>>.from(jsonData['data']);
+          isLoading = false;
+        });
+      } else {
+        throw Exception("Failed to fetch favorites");
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+    }
+  }
+
+  Future<void> _toggleLike(String cakeSlug, bool isLiked) async {
+    try {
+      var response = await http.post(
+        Uri.parse('${Constants.baseUrl}/cake/like/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${Constants.prefs.getString("token")}',
+        },
+        body: jsonEncode({'cake_slug': cakeSlug, 'liked': !isLiked}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          int index = favoriteCakes.indexWhere(
+            (cake) => cake["slug"] == cakeSlug,
+          );
+          favoriteCakes[index]["liked"] = !isLiked;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                !isLiked
+                    ? Text("Added to favorites")
+                    : Text("Removed from favorites"),
+            duration: Duration(milliseconds: 500),
+          ),
+        );
+      } else {
+        throw Exception("Failed to update like status");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+    }
   }
 
   @override
@@ -83,87 +126,169 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           SizedBox(height: 10),
           Expanded(
             child:
-                favoriteCakes.isEmpty
-                    ? Center(child: Text("No favorites yet!"))
-                    : Padding(
-                      padding: EdgeInsets.all(8),
-                      child: GridView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: favoriteCakes.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.9,
-                        ),
-                        itemBuilder: (context, index) {
-                          final cake = favoriteCakes[index];
-                          return Card(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(10),
-                                  ),
-                                  child: Image.network(
-                                    cake["imageUrl"],
-                                    width: double.infinity,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                    vertical: 4,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          cake["name"],
-                                          softWrap: true,
-                                          maxLines: 2, // Allow up to 2 lines
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon:
-                                            cake['isLiked']
-                                                ? Icon(
-                                                  Icons.favorite,
-                                                  color: Colors.red,
-                                                )
-                                                : Icon(
-                                                  Icons.favorite_outline,
-                                                  color: Colors.red,
-                                                ),
-                                        onPressed:
-                                            () => _removeFromFavorites(
-                                              cake["id"],
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                isLoading
+                    ? _buildSkeletonLoader() // Show skeleton while loading
+                    : favoriteCakes.isEmpty
+                    ? const Center(child: Text("No favorites yet!"))
+                    : _buildCakeGrid(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 6, // Number of skeleton items
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.8,
+        ),
+        itemBuilder: (context, index) {
+          return Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 3,
+            child: Column(
+              children: [
+                Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300], // Static grey color
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(10),
+                    ),
+                  ),
+                ), // Image placeholder
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 16,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ), // Name placeholder
+                      const SizedBox(height: 5),
+                      Container(
+                        height: 14,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ), // Price placeholder
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCakeGrid() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: favoriteCakes.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.9,
+        ),
+        itemBuilder: (context, index) {
+          final cake = favoriteCakes[index];
+          return GestureDetector(
+            onTap: () async {
+              try {
+                final isUpdated = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CakeCustomScreen(slug: cake["slug"]),
+                  ),
+                );
+                if (isUpdated == true) {
+                  // Instead of fetching all favorites again, update the specific item
+                  _updateLikedStatus(cake["slug"]);
+                }
+              } catch (e) {
+                print("Navigation error: $e");
+              }
+            },
+
+            child: Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(10),
+                    ),
+                    child: Image.network(
+                      cake["image_url"],
+                      width: double.infinity,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            cake["name"],
+                            softWrap: true,
+                            maxLines: 2,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon:
+                              cake["liked"]
+                                  ? Icon(Icons.favorite, color: Colors.red)
+                                  : Icon(
+                                    Icons.favorite_outline,
+                                    color: Colors.red,
+                                  ),
+                          onPressed:
+                              () => _toggleLike(cake["slug"], cake["liked"]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

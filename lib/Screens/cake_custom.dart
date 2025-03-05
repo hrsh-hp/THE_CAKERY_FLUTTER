@@ -16,6 +16,7 @@ class CakeCustomScreen extends StatefulWidget {
 class _CakeCustomScreenState extends State<CakeCustomScreen> {
   bool isLoading = true;
   bool isLiked = false;
+  bool initialLikeStatus = false;
   bool availableToppings = true;
   int likes = 0;
   int quantity = 1;
@@ -55,6 +56,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
           imageUrl = data["image_url"];
           description = data["description"];
           isLiked = data["liked"];
+          initialLikeStatus = isLiked;
           likes = data["likes_count"];
           availableToppings = data["available_toppings"];
           sizeOptions = {
@@ -74,7 +76,10 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pop(context, isLiked); // Pass updated like status
+        Navigator.pop(
+          context,
+          isLiked != initialLikeStatus,
+        ); // Pass updated like status
         return true;
       },
       child: Scaffold(
@@ -153,7 +158,18 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                     }),
                                   );
 
-                                  if (response.statusCode != 200) {
+                                  if (response.statusCode == 200) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isLiked
+                                              ? "Added to favorites"
+                                              : "Removed from favorites",
+                                        ),
+                                        duration: Duration(milliseconds: 500),
+                                      ),
+                                    );
+                                  } else {
                                     throw Exception(
                                       "Failed to update like status",
                                     );
