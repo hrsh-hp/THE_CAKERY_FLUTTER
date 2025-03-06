@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:the_cakery/Screens/accounts_screen.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'package:the_cakery/utils/constants.dart';
 
 class CartScreen extends StatefulWidget {
   @override
@@ -9,63 +13,56 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  List<Map<String, dynamic>> cartItems = [
-    {
-      "id": 1,
-      "name": "Chocolate Cake",
-      "size": "Medium",
-      "quantity": 2,
-      "price": 799.0,
-      "imageUrl":
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-    },
-    {
-      "id": 2,
-      "name": "Vanilla Cake",
-      "size": "Large",
-      "quantity": 1,
-      "price": 1199.0,
-      "imageUrl":
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_aHBROo9v_qSg_mhMLje2MX1az3HjbbOUQg&s",
-    },
-  ];
-
-  String selectedLocation = "Home, 123 Street, City";
+  bool isLoading = true;
+  List<Map<String, dynamic>> cartItems = [];
+  String selectedLocation = "";
   String deliveryTimeEstimate = "20-30 min";
-  String selectedPaymentMethod = "Credit Card";
-
+  String selectedPaymentMethod = "UPI";
   final Map<String, double> charges = {
     "Subtotal": 0.0,
+    "Taxes": 0.0,
     "Delivery Fee": 50.0,
-    "Taxes": 30.0,
+    "Total": 0.0,
   };
 
   @override
   void initState() {
     super.initState();
-    _calculateSubtotal();
+    _fetchCartData();
   }
 
-  void _calculateSubtotal() {
-    double subtotal = cartItems.fold(
-      0,
-      (sum, item) => sum + (item["price"] * item["quantity"]),
+  Future<void> _fetchCartData() async {
+    final response = await http.get(
+      Uri.parse('${Constants.baseUrl}/cake/cart'),
+      headers: {
+        "Authorization": "Token ${Constants.prefs.getString("token")}",
+        "Content-Type": "application/json",
+      },
     );
-    setState(() {
-      charges["Subtotal"] = subtotal;
-    });
-  }
-
-  void _removeItem(int id) {
-    setState(() {
-      cartItems.removeWhere((item) => item["id"] == id);
-      _calculateSubtotal();
-    });
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Item removed from cart")));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)["data"];
+      double cartTotal = double.parse(data["cart_total"]);
+      double subtotal = cartTotal / 1.18;
+      double tax = cartTotal - subtotal;
+      setState(() {
+        selectedLocation = data["del_address"];
+        cartItems =
+            (data["cart_items"] as List).map((item) {
+              return {
+                "cake_slug": item['slug'],
+                "cake_name": item["cake_name"],
+                "cake_price": double.parse(item["cake_price"]),
+                "size": item["size"],
+                "quantity": item["quantity"],
+                "imageUrl": item["image_url"],
+              };
+            }).toList();
+        charges["Subtotal"] = subtotal;
+        charges["Taxes"] = tax;
+        charges["Total"] = cartTotal + charges["Delivery Fee"]!;
+        isLoading = false;
+      });
+    }
   }
 
   void _editAddress() {
@@ -102,6 +99,13 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  void _removeItem(String cake_slug) {
+    setState(() {
+      cartItems.removeWhere((item) => item["cake_slug"] == cake_slug);
+      // _fetchCartData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,13 +124,14 @@ class _CartScreenState extends State<CartScreen> {
         scaffoldKey: _scaffoldKey,
       ),
       drawer: const AccountsScreen(),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            cartItems.isEmpty
-                ? Center(child: Text("Your cart is empty"))
-                : Column(
+      body:
+          isLoading
+              ? _buildLoadingSkeleton()
+              : cartItems.isEmpty
+              ? Center(child: Text("Your cart is empty"))
+              : SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildCartList(),
@@ -140,9 +145,24 @@ class _CartScreenState extends State<CartScreen> {
                     _buildPlaceOrderButton(),
                   ],
                 ),
-          ],
-        ),
-      ),
+              ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 8),
+          child: ListTile(
+            leading: Container(width: 50, height: 50, color: Colors.grey[300]),
+            title: Container(width: 100, height: 10, color: Colors.grey[300]),
+            subtitle: Container(width: 50, height: 10, color: Colors.grey[300]),
+          ),
+        );
+      },
     );
   }
 
@@ -151,20 +171,22 @@ class _CartScreenState extends State<CartScreen> {
       children:
           cartItems.map((item) {
             return Card(
-              margin: EdgeInsets.symmetric(vertical: 8),
               child: ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 8),
                 leading: Image.network(item["imageUrl"], width: 50, height: 50),
-                title: Text("${item["name"]} (${item["size"]})"),
+                title: Text("${item["cake_name"]} (${item["size"]})"),
                 subtitle: Text("Qty: ${item["quantity"]}"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      "₹${(item["price"] * item["quantity"]).toStringAsFixed(2)}",
+                      "₹${item["cake_price"].toStringAsFixed(2)}",
+                      style: TextStyle(fontSize: 12),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _removeItem(item["id"]),
+                      icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _removeItem(item["cake_slug"]),
                     ),
                   ],
                 ),
@@ -182,7 +204,6 @@ class _CartScreenState extends State<CartScreen> {
           "Delivery Address",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        SizedBox(height: 5),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -212,8 +233,8 @@ class _CartScreenState extends State<CartScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildPaymentCard("Card", Icons.credit_card),
             _buildPaymentCard("UPI", Icons.mobile_friendly),
+            _buildPaymentCard("Card", Icons.credit_card),
             _buildPaymentCard("Cash", Icons.money),
           ],
         ),
@@ -231,7 +252,6 @@ class _CartScreenState extends State<CartScreen> {
       child: Card(
         color:
             selectedPaymentMethod == method ? Colors.brown[200] : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -247,14 +267,10 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildPriceDetails() {
-    double total =
-        charges["Subtotal"]! + charges["Delivery Fee"]! + charges["Taxes"]!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Price Details", style: TextStyle(fontWeight: FontWeight.bold)),
-        SizedBox(height: 10),
-        ...charges.entries.map((entry) {
+        ...charges.entries.where((entry) => entry.key != "Total").map((entry) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
@@ -275,7 +291,7 @@ class _CartScreenState extends State<CartScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             Text(
-              "₹${total.toStringAsFixed(2)}",
+              "₹${charges["Total"]!.toStringAsFixed(2)}",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ],
