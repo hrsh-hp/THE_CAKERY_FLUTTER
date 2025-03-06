@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:the_cakery/utils/constants.dart';
@@ -29,6 +29,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
   String description = "";
   String cakeSlug = "";
   String selectedSizeSlug = "";
+  Map<String, dynamic> toppingsOptions = {};
   Map<String, Map<String, dynamic>> sizeOptions = {};
 
   // final List<String> toppings = ["Choco Chips", "Nuts", "Sprinkles", "Fruits"];
@@ -38,6 +39,14 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     super.initState();
     print("Received slug: ${widget.slug}"); // Debugging
     fetchCakeDetails(); // If applicable
+  }
+
+  double calculateTotalPrice() {
+    double toppingPrice = selectedToppings.fold(0, (sum, toppingSlug) {
+      return sum + (toppingsOptions[toppingSlug]?["price"] ?? 0.0);
+    });
+
+    return (selectedPrice + toppingPrice) * quantity;
   }
 
   Future<void> fetchCakeDetails() async {
@@ -63,11 +72,13 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
           likes = data["likes_count"];
           cakeSlug = data["slug"];
           availableToppings = data["available_toppings"];
+
           sizeOptions = {
-            for (var size in data["sizes"])
+            for (var size in (data["sizes"] ?? [])) // Use null-aware operator
               size["slug"]: {
-                "name": size["size"],
-                "price": double.parse(size["price"]),
+                "name": size["size"] ?? "Unknown",
+                "price":
+                    double.tryParse(size["price"]?.toString() ?? "0.0") ?? 0.0,
               },
           };
           selectedSizeSlug = sizeOptions.keys.first;
@@ -75,11 +86,27 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
               sizeOptions[selectedSizeSlug]?["name"] ??
               "Medium"; // Get size name
           selectedPrice = sizeOptions[selectedSizeSlug]?["price"] ?? 0.0;
+          toppingsOptions = {
+            for (var topping in data["toppings"])
+              topping["slug"]: {
+                "name": topping["name"],
+                "price": double.parse(topping["price"]),
+                "selected": false, // Default: topping not selected
+              },
+          };
           isLoading = false;
         });
       }
     } catch (e) {
       print("Error fetching cake details: $e");
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to fetch cake details. Please try again."),
+        ),
+      );
     }
   }
 
@@ -91,12 +118,14 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     int quantity,
     double selectedPrice,
     String cakeName,
+    List<String> selectedToppings,
   ) async {
     final String apiUrl = "${Constants.baseUrl}/cake/cart/add/";
     final Map<String, dynamic> requestData = {
       "cake_slug": cakeSlug,
       "size_slug": sizeSlug,
       "quantity": quantity,
+      "toppings": selectedToppings,
     };
 
     try {
@@ -158,26 +187,20 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Center(
-                      child:
-                          imageUrl.isNotEmpty
-                              ? Image.network(
-                                imageUrl,
-                                height: 200,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.broken_image,
-                                    size: 100,
-                                    color: Colors.grey,
-                                  );
-                                },
-                              )
-                              : Icon(
-                                Icons.image,
-                                size: 100,
-                                color: Colors.grey,
-                              ),
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        placeholder:
+                            (context, url) => LinearProgressIndicator(),
+                        errorWidget:
+                            (context, url, error) => Icon(
+                              Icons.image,
+                              size: 100,
+                              color: Colors.grey,
+                            ),
+                      ),
                     ),
                     SizedBox(height: 10),
                     Row(
@@ -201,19 +224,21 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                         color: Colors.red,
                                       ),
                               onPressed: () async {
+                                bool previousLikedState = isLiked;
                                 setState(() {
                                   isLiked = !isLiked;
                                   likes += isLiked ? 1 : -1;
                                 });
+
                                 try {
                                   final response = await http.post(
                                     Uri.parse(
                                       '${Constants.baseUrl}/cake/like/',
-                                    ), // Replace with your API URL
+                                    ),
                                     headers: {
                                       'Content-Type': 'application/json',
                                       'Authorization':
-                                          'Token ${Constants.prefs.getString("token")}', // Add authentication
+                                          'Token ${Constants.prefs.getString("token")}',
                                     },
                                     body: jsonEncode({
                                       'cake_slug': widget.slug,
@@ -221,28 +246,16 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                     }),
                                   );
 
-                                  if (response.statusCode == 200) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          isLiked
-                                              ? "Added to favorites"
-                                              : "Removed from favorites",
-                                        ),
-                                        duration: Duration(milliseconds: 500),
-                                      ),
-                                    );
-                                  } else {
+                                  if (response.statusCode != 200) {
                                     throw Exception(
                                       "Failed to update like status",
                                     );
                                   }
                                 } catch (e) {
                                   setState(() {
-                                    isLiked =
-                                        !isLiked; // Revert UI if request fails
+                                    isLiked = previousLikedState; // Revert UI
+                                    likes += isLiked ? -1 : 1;
                                   });
-                                  print("Error: $e");
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -310,20 +323,31 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                     Wrap(
                       spacing: 8.0,
                       children:
-                          ["Choco Chips", "Nuts", "Sprinkles", "Fruits"].map((
-                            topping,
-                          ) {
+                          toppingsOptions.entries.map((entry) {
+                            final String toppingSlug = entry.key;
+                            final Map<String, dynamic> toppingData =
+                                entry.value;
+                            final String toppingName = toppingData["name"];
+                            final double toppingPrice = toppingData["price"];
+                            final bool isSelected = selectedToppings.contains(
+                              toppingSlug,
+                            );
+
                             return ChoiceChip(
-                              label: Text(topping),
-                              selected: selectedToppings.contains(topping),
+                              label: Text(
+                                "$toppingName (+₹${toppingPrice.toStringAsFixed(2)})",
+                              ),
+                              selected: isSelected,
                               onSelected:
                                   availableToppings
                                       ? (selected) {
                                         setState(() {
                                           if (selected) {
-                                            selectedToppings.add(topping);
+                                            selectedToppings.add(toppingSlug);
                                           } else {
-                                            selectedToppings.remove(topping);
+                                            selectedToppings.remove(
+                                              toppingSlug,
+                                            );
                                           }
                                         });
                                       }
@@ -333,14 +357,12 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                   Colors
                                       .grey[300], // Light grey to indicate disabled
                               labelStyle: TextStyle(
-                                color:
-                                    selectedToppings.contains(topping)
-                                        ? Colors.white
-                                        : Colors.black,
+                                color: isSelected ? Colors.white : Colors.black,
                               ),
                             );
                           }).toList(),
                     ),
+
                     // SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -385,6 +407,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                     quantity,
                     selectedPrice,
                     cakeName,
+                    selectedToppings,
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -396,7 +419,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   ),
                 ),
                 child: Text(
-                  "Add to Cart - ₹${(selectedPrice * quantity).toStringAsFixed(2)}",
+                  "Add to Cart - ₹${calculateTotalPrice().toStringAsFixed(2)}",
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.surfaceContainer,
                   ),
