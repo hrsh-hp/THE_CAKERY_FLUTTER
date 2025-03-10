@@ -64,8 +64,6 @@ class MyApp extends StatelessWidget {
             return NavigationUtils.fadeRoute(FavoritesScreen());
           case "/editprofile":
             return NavigationUtils.slideRoute(EditProfileScreen());
-          case "/deliveryreview":
-            return NavigationUtils.slideRoute(DeliveryReviewScreen());
         }
       },
     );

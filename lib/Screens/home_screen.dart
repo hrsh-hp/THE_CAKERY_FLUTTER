@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:the_cakery/Screens/accounts_screen.dart';
@@ -15,10 +14,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   List<Map<String, dynamic>> cakes = [];
   bool isLoading = true;
-  bool hasError = false; // to handle API errors
+  bool hasError = false;
 
   @override
   void initState() {
@@ -31,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final index = cakes.indexWhere((cake) => cake["slug"] == slug);
       if (index != -1) {
         cakes[index]["liked"] = isLiked;
-        cakes[index]["likes_count"] = likeCount; // Update like count
+        cakes[index]["likes_count"] = likeCount;
       }
     });
   }
@@ -49,9 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body)['data'];
         setState(() {
-          cakes = data.cast<Map<String, dynamic>>(); // Convert to List<Map>
+          cakes = data.cast<Map<String, dynamic>>();
           isLoading = false;
-          // print("cakes $cakes");
         });
       } else {
         throw Exception("Failed to load cakes");
@@ -59,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       setState(() {
         hasError = true;
-        print("error here $e");
         isLoading = false;
       });
     }
@@ -74,61 +70,123 @@ class _HomeScreenState extends State<HomeScreen> {
         scaffoldKey: _scaffoldKey,
       ),
       drawer: const AccountsScreen(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              "https://img.freepik.com/free-photo/top-view-delicious-cake-arrangement_23-2148933608.jpg",
-              width: double.infinity,
-              height: 150,
-              fit: BoxFit.cover,
-            ),
-            SizedBox(height: 10),
-            Center(
-              child: Text(
-                "CLASSIC CAKES",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "MENU",
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+      body: RefreshIndicator(
+        onRefresh: fetchCakes,
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      "https://img.freepik.com/free-photo/top-view-delicious-cake-arrangement_23-2148933608.jpg",
+                    ),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.3),
+                      BlendMode.darken,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // ScrollAction.getDirectionalIncrement(ScrollableState., intent)
-                    },
-                    child: Text(
-                      "View all",
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "The Cakery",
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Handcrafted with love",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white.withOpacity(0.9),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child:
-                  isLoading
-                      ? _buildLoadingShimmer() // Show Skeleton while loading
-                      : hasError
-                      ? Center(
-                        child: Text("Failed to load data. Please try again."),
-                      )
-                      : _buildCakeGrid(),
-            ),
-          ],
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Featured Cakes",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown[800],
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: Text(
+                            "View All",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.brown[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // SizedBox(height: 16),
+                    isLoading
+                        ? _buildLoadingShimmer()
+                        : hasError
+                        ? _buildErrorState()
+                        : _buildCakeGrid(),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 32),
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+          SizedBox(height: 16),
+          Text(
+            "Oops! Something went wrong",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "Pull to refresh and try again",
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }
@@ -136,43 +194,59 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildLoadingShimmer() {
     return GridView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.8,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.75,
       ),
-      itemCount: 4, // Show 4 shimmer items
+      itemCount: 4,
       itemBuilder: (context, index) {
-        return Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-          elevation: 3,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 120,
-                color: Colors.grey[300],
-              ), // Image placeholder
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+              ),
               Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       height: 16,
                       width: 100,
-                      color: Colors.grey[300],
-                    ), // Name
-                    const SizedBox(height: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    SizedBox(height: 8),
                     Container(
                       height: 14,
-                      width: 50,
-                      color: Colors.grey[300],
-                    ), // Price
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -185,14 +259,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCakeGrid() {
     return GridView.builder(
+      padding: EdgeInsets.symmetric(vertical: 8),
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.8,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.75,
       ),
       itemCount: cakes.length,
       itemBuilder: (context, index) {
@@ -216,7 +290,6 @@ class _HomeScreenState extends State<HomeScreen> {
             final bool newLikedStatus = result["isLiked"];
             final int newLikeCount = result["likes"];
 
-            // Only update if there is a change in like status or like count
             if (cake["liked"] != newLikedStatus ||
                 cake["likes_count"] != newLikeCount) {
               _updateLikedStatus(cake["slug"], newLikedStatus, newLikeCount);
@@ -226,66 +299,108 @@ class _HomeScreenState extends State<HomeScreen> {
           print("Navigation error: $e");
         }
       },
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 3,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(10),
-              ),
-              child: Image.network(
-                cake["image_url"],
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    cake["name"],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+          ],
+        ),
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  child: Image.network(
+                    cake["image_url"],
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          cake['liked']
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          "${cake["likes_count"]}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          cake['liked']
-                              ? const Icon(
-                                Icons.favorite,
-                                size: 16,
-                                color: Colors.red,
-                              )
-                              : const Icon(
-                                Icons.favorite_outline,
-                                size: 16,
-                                color: Colors.red,
-                              ),
-                          const SizedBox(width: 2),
-                          Text("${cake["likes_count"]}"),
-                        ],
+                ),
+              ],
+            ),
+            Expanded(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      cake["name"],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown[800],
                       ),
-                      Text(
-                        "₹${cake["price"]}",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "₹${cake["price"]}",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.brown[600],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        Container(
+                          padding: EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.brown[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward,
+                            size: 16,
+                            color: Colors.brown[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
