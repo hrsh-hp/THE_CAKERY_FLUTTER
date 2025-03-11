@@ -13,7 +13,6 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   List<Map<String, dynamic>> favoriteCakes = [];
   bool isLoading = true;
 
@@ -33,7 +32,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   void _fetchFavorites() async {
-    setState(() => isLoading = true); // Show loading skeleton
+    setState(() => isLoading = true);
     try {
       var response = await http.get(
         Uri.parse("${Constants.baseUrl}/cake/liked_cake"),
@@ -55,9 +54,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -82,20 +85,25 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                !isLiked
-                    ? Text("Added to favorites")
-                    : Text("Removed from favorites"),
+            content: Text(
+              !isLiked ? "Added to favorites" : "Removed from favorites",
+            ),
             duration: Duration(milliseconds: 500),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.brown,
           ),
         );
       } else {
         throw Exception("Failed to update like status");
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -108,29 +116,94 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         scaffoldKey: _scaffoldKey,
       ),
       drawer: const AccountsScreen(),
-      body: Column(
-        children: [
-          Image.network(
-            "https://img.freepik.com/free-photo/top-view-delicious-cake-arrangement_23-2148933608.jpg",
-            width: double.infinity,
-            height: 150,
-            fit: BoxFit.cover,
+      body: RefreshIndicator(
+        onRefresh: () async => _fetchFavorites(),
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      "https://img.freepik.com/free-photo/top-view-delicious-cake-arrangement_23-2148933608.jpg",
+                    ),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.3),
+                      BlendMode.darken,
+                    ),
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "My Favorites",
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Your handpicked collection",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white.withOpacity(0.9),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    isLoading
+                        ? _buildSkeletonLoader()
+                        : favoriteCakes.isEmpty
+                        ? _buildEmptyState()
+                        : _buildCakeGrid(),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 10),
-          Center(
-            child: Text(
-              "Favourite Cakes",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 32),
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.favorite_border, size: 64, color: Colors.grey[400]),
+          SizedBox(height: 16),
+          Text(
+            "No favorites yet!",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
             ),
           ),
-          SizedBox(height: 10),
-          Expanded(
-            child:
-                isLoading
-                    ? _buildSkeletonLoader() // Show skeleton while loading
-                    : favoriteCakes.isEmpty
-                    ? const Center(child: Text("No favorites yet!"))
-                    : _buildCakeGrid(),
+          SizedBox(height: 8),
+          Text(
+            "Start adding cakes you love",
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
         ],
       ),
@@ -138,165 +211,205 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildSkeletonLoader() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 6, // Number of skeleton items
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.8,
-        ),
-        itemBuilder: (context, index) {
-          return Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            elevation: 3,
-            child: Column(
-              children: [
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300], // Static grey color
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(10),
-                    ),
-                  ),
-                ), // Image placeholder
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 16,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ), // Name placeholder
-                      const SizedBox(height: 5),
-                      Container(
-                        height: 14,
-                        width: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ), // Price placeholder
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.75,
       ),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 16,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      height: 14,
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildCakeGrid() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: GridView.builder(
-        padding: EdgeInsets.zero,
-        itemCount: favoriteCakes.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.9,
-        ),
-        itemBuilder: (context, index) {
-          final cake = favoriteCakes[index];
-          return GestureDetector(
-            onTap: () async {
-              try {
-                final Map<String, dynamic>? result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CakeCustomScreen(slug: cake["slug"]),
-                  ),
-                );
-                print("result $result");
-                print("result ${cake['liked']}");
-                if (result != null) {
-                  final bool newLikedStatus = result["isLiked"];
-                  final int newLikeCount = result["likes"];
-                  print("newliked $newLikedStatus");
-                  // Only update if there is a change in like status or like count
-                  if (cake["liked"] != newLikedStatus) {
-                    _updateLikedStatus(cake["slug"]);
-                  }
-                }
-              } catch (e) {
-                print("Navigation error: $e");
-              }
-            },
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: favoriteCakes.length,
+      itemBuilder: (context, index) {
+        final cake = favoriteCakes[index];
+        return GestureDetector(
+          onTap: () async {
+            try {
+              final Map<String, dynamic>? result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CakeCustomScreen(slug: cake["slug"]),
+                ),
+              );
 
-            child: Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(10),
+              if (result != null) {
+                final bool newLikedStatus = result["isLiked"];
+                if (cake["liked"] != newLikedStatus) {
+                  _updateLikedStatus(cake["slug"]);
+                }
+              }
+            } catch (e) {
+              print("Navigation error: $e");
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: Image.network(
+                        cake["image_url"],
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    child: Image.network(
-                      cake["image_url"],
-                      width: double.infinity,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            cake["name"],
-                            softWrap: true,
-                            maxLines: 2,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () => _toggleLike(cake["slug"], cake["liked"]),
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            cake["liked"]
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: Colors.red,
+                            size: 20,
                           ),
                         ),
-                        IconButton(
-                          icon:
-                              cake["liked"]
-                                  ? Icon(Icons.favorite, color: Colors.red)
-                                  : Icon(
-                                    Icons.favorite_outline,
-                                    color: Colors.red,
-                                  ),
-                          onPressed:
-                              () => _toggleLike(cake["slug"], cake["liked"]),
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          cake["name"],
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown[800],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "₹${cake["price"]}",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.brown[600],
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.brown[50],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward,
+                                size: 16,
+                                color: Colors.brown[800],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

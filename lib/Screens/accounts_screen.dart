@@ -79,7 +79,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               backgroundColor: Theme.of(context).colorScheme.surfaceDim,
               backgroundImage:
                   _profilePicture != null
-                      ? NetworkImage(_profilePicture!) // Load profile picture
+                      ? NetworkImage(_profilePicture!)
                       : null,
               child:
                   _profilePicture == null
@@ -92,12 +92,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
             title: const Text("Edit Profile"),
             shape: LinearBorder.end(
               side: BorderSide(color: Colors.grey.shade300, width: 1),
-              // borderRadius: BorderRadius.zero,
             ),
             onTap: () {
-              // Navigator.pop(context); // Close drawer
               Navigator.pushNamed(context, "/editprofile");
-              // Navigate to edit profile screen (if required)
             },
           ),
           ListTile(
@@ -109,8 +106,43 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
             onTap: () => _logout(context),
           ),
+          ..._buildAdminMenu(), // ✅ Correct way to conditionally add widgets
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAdminMenu() {
+    if (Constants.prefs.getString('role') == 'admin') {
+      return [
+        ListTile(
+          leading: const Icon(Icons.add),
+          title: const Text("Add Cakes"),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            borderRadius: BorderRadius.zero,
+          ),
+          onTap: () {
+            Navigator.pushNamed(context, "/addcakes");
+          },
+        ),
+      ];
+    }
+    if (Constants.prefs.getString('role') == 'delivery_person') {
+      return [
+        ListTile(
+          leading: const Icon(Icons.add),
+          title: const Text("My Orderes"),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            borderRadius: BorderRadius.zero,
+          ),
+          onTap: () {
+            Navigator.pushNamed(context, "/deliveryorders");
+          },
+        ),
+      ];
+    }
+    return [];
   }
 }

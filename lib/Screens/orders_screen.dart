@@ -129,6 +129,33 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  void _navigateToDeliveryReview(Map<String, dynamic> order) {
+    if (order['delivery_person'] != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => DeliveryReviewScreen(
+                orderSlug: order["slug"],
+                deliveryPerson: order["delivery_person"]["name"] ?? "Unknown",
+                vehicleNumber: order["delivery_person"]["vehicle_number"],
+                phoneNumber: order["delivery_person"]["phone_no"],
+                deliveryPersonSlug: order["delivery_person"]["slug"],
+                isReviewed: order["is_reviewed"],
+              ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Delivery person information not available"),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,6 +165,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
           "My Orders",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
+        elevation: 0,
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black87),
@@ -160,13 +189,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 16.0,
-                          vertical: 4,
+                          vertical: 8,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (pendingOrders.isNotEmpty) _buildCurrentOrders(),
-                            SizedBox(height: 15),
+                            // SizedBox(height: 24),
                             Text(
                               "Past Orders",
                               style: TextStyle(
@@ -268,7 +297,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -427,21 +456,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap:
-                  isCompleted
-                      ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => DeliveryReviewScreen(
-                                orderSlug: order["slug"],
-                                deliveryPerson:
-                                    order["delivery_person"] ?? "Unknown",
-                              ),
-                        ),
-                      )
-                      : null,
+                  isCompleted ? () => _navigateToDeliveryReview(order) : null,
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(14),
                 child: Row(
                   children: [
                     ClipRRect(

@@ -279,11 +279,11 @@ class _CartScreenState extends State<CartScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildCartList(),
-                      SizedBox(height: 24),
+                      SizedBox(height: 20),
                       _buildAddressSection(),
-                      SizedBox(height: 24),
+                      SizedBox(height: 20),
                       _buildPaymentSection(),
-                      SizedBox(height: 24),
+                      SizedBox(height: 20),
                       _buildPriceDetails(),
                       SizedBox(height: 10), // Space for bottom button
                     ],
