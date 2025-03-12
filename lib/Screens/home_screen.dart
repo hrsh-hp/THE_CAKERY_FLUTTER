@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 200,
+                height: 180,
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     image: NetworkImage(

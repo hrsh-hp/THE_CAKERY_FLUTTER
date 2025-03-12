@@ -65,8 +65,9 @@ class MyApp extends StatelessWidget {
           case "/editprofile":
             return NavigationUtils.slideRoute(EditProfileScreen());
           case "/add_cakes":
-            return NavigationUtils.slideRoute(AddCakes());
+            return NavigationUtils.slideRoute(AddCakeScreen());
         }
+        return null;
       },
     );
   }

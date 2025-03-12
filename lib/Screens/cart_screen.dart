@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:the_cakery/utils/constants.dart';
 
 class CartScreen extends StatefulWidget {
+  const CartScreen({super.key});
+
   @override
   _CartScreenState createState() => _CartScreenState();
 }
@@ -101,8 +103,8 @@ class _CartScreenState extends State<CartScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
               style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+              child: Text("Cancel"),
             ),
             ElevatedButton(
               onPressed: () {
@@ -111,7 +113,6 @@ class _CartScreenState extends State<CartScreen> {
                 });
                 Navigator.pop(context);
               },
-              child: Text("Save"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.brown,
                 foregroundColor: Colors.white,
@@ -119,6 +120,7 @@ class _CartScreenState extends State<CartScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              child: Text("Save"),
             ),
           ],
         );
@@ -126,9 +128,9 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  void _removeItem(String cake_slug) async {
+  void _removeItem(String cakeSlug) async {
     int itemIndex = cartItems.indexWhere(
-      (item) => item["cake_slug"] == cake_slug,
+      (item) => item["cake_slug"] == cakeSlug,
     );
     if (itemIndex == -1) return;
     Map<String, dynamic> removedItem = cartItems[itemIndex];
@@ -141,7 +143,7 @@ class _CartScreenState extends State<CartScreen> {
         "Authorization": "Token ${Constants.prefs.getString("token")}",
         "Content-Type": "application/json",
       },
-      body: json.encode({"cart_item_slug": cake_slug}),
+      body: json.encode({"cart_item_slug": cakeSlug}),
     );
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -441,7 +443,7 @@ class _CartScreenState extends State<CartScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

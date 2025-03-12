@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:the_cakery/Screens/login.dart';
 import 'package:the_cakery/utils/constants.dart';
 
 class AccountsScreen extends StatefulWidget {
@@ -97,6 +96,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               Navigator.pushNamed(context, "/editprofile");
             },
           ),
+          ..._buildAdminMenu(), // ✅ Correct way to conditionally add widgets
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text("Logout"),
@@ -106,7 +106,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
             onTap: () => _logout(context),
           ),
-          ..._buildAdminMenu(), // ✅ Correct way to conditionally add widgets
         ],
       ),
     );
@@ -123,7 +122,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
             borderRadius: BorderRadius.zero,
           ),
           onTap: () {
-            Navigator.pushNamed(context, "/addcakes");
+            Navigator.pushNamed(context, "/add_cakes");
           },
         ),
       ];

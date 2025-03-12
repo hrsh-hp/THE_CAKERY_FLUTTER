@@ -9,12 +9,12 @@ class EditAddressScreen extends StatefulWidget {
   final double initialLatitude;
 
   const EditAddressScreen({
-    Key? key,
+    super.key,
     required this.initialAddress,
     required this.initialLongitude,
     required this.initialLatitude,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<EditAddressScreen> createState() => _EditAddressScreenState();

@@ -8,6 +8,8 @@ import 'package:the_cakery/utils/constants.dart';
 import 'dart:async';
 
 class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
+
   @override
   _OrdersScreenState createState() => _OrdersScreenState();
 }
@@ -424,7 +426,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

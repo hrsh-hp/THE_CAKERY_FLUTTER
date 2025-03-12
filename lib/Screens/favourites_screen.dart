@@ -7,6 +7,8 @@ import 'package:the_cakery/utils/bottom_nav_bar.dart';
 import 'package:the_cakery/utils/constants.dart';
 
 class FavoritesScreen extends StatefulWidget {
+  const FavoritesScreen({super.key});
+
   @override
   _FavoritesScreenState createState() => _FavoritesScreenState();
 }

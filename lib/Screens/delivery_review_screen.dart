@@ -12,14 +12,14 @@ class DeliveryReviewScreen extends StatefulWidget {
   final bool isReviewed;
 
   const DeliveryReviewScreen({
-    Key? key,
+    super.key,
     required this.orderSlug,
     required this.deliveryPerson,
     this.vehicleNumber,
     this.phoneNumber,
     required this.deliveryPersonSlug,
     required this.isReviewed,
-  }) : super(key: key);
+  });
 
   @override
   _DeliveryReviewScreenState createState() => _DeliveryReviewScreenState();
@@ -453,7 +453,7 @@ class _DeliveryReviewScreenState extends State<DeliveryReviewScreen> {
   }
 
   Widget _buildSubmitButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isSubmitting ? null : _submitReview,
