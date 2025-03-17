@@ -44,7 +44,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         pendingOrders = [];
 
         for (var order in data) {
-          if (order["status"] == "pending") {
+          if (order["status"] == "confirmed") {
             pendingOrders.add(order);
           } else {
             pastOrders.add(order);
@@ -53,9 +53,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         isLoading = false;
       });
 
-      if (pendingOrders.isNotEmpty) {
-        _startTimer();
-      }
+      // if (pendingOrders.isNotEmpty) {
+      //   // _startTimer();
+      // }
     }
   }
 
@@ -143,7 +143,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 vehicleNumber: order["delivery_person"]["vehicle_number"],
                 phoneNumber: order["delivery_person"]["phone_no"],
                 deliveryPersonSlug: order["delivery_person"]["slug"],
-                isReviewed: order["is_reviewed"],
+                isReviewed: order["is_reviewed"] ?? false,
               ),
         ),
       );
@@ -171,8 +171,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+          icon: Icon(Icons.menu, color: Colors.black87),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
@@ -185,35 +185,76 @@ class _OrdersScreenState extends State<OrdersScreen> {
         child:
             isLoading
                 ? _buildSkeletonLoader()
-                : CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (pendingOrders.isNotEmpty) _buildCurrentOrders(),
-                            // SizedBox(height: 24),
-                            Text(
-                              "Past Orders",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                : RefreshIndicator(
+                  onRefresh: _fetchOrders,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (pendingOrders.isEmpty)
+                                _buildEmptyState(
+                                  "No Current Orders",
+                                  "Your current orders will appear here",
+                                  Icons.local_shipping_outlined,
+                                )
+                              else
+                                _buildCurrentOrders(),
+                              SizedBox(height: 24),
+                              Text(
+                                "Past Orders",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
                               ),
-                            ),
-                            // SizedBox(height: 16),
-                          ],
+                              SizedBox(height: 16),
+                              if (pastOrders.isEmpty)
+                                _buildEmptyState(
+                                  "No Past Orders",
+                                  "Your order history will appear here",
+                                  Icons.history,
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    _buildPastOrders(),
-                  ],
+                      if (pastOrders.isNotEmpty) _buildPastOrders(),
+                    ],
+                  ),
                 ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 32),
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: Colors.brown[200]),
+          SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.brown[800],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -299,7 +340,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(14),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -359,20 +400,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ],
                         ),
                       ),
-                      Row(
+                      Column(
                         children: [
-                          TextButton.icon(
-                            onPressed: () => _cancelOrder(order["slug"]),
-                            icon: Icon(
-                              Icons.cancel_outlined,
-                              color: Colors.red,
-                            ),
-                            label: Text(
-                              "Cancel",
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                          SizedBox(width: 8),
                           TextButton.icon(
                             onPressed: () => _markOrderCompleted(order["slug"]),
                             icon: Icon(
@@ -384,13 +413,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               style: TextStyle(color: Colors.green),
                             ),
                           ),
+                          SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: () => _cancelOrder(order["slug"]),
+                            icon: Icon(
+                              Icons.cancel_outlined,
+                              color: Colors.red,
+                            ),
+                            label: Text(
+                              "Cancel",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
+                  // SizedBox(height: 8),
                   Divider(),
-                  SizedBox(height: 12),
+                  SizedBox(height: 8),
                   Row(
                     children: [
                       Icon(
@@ -435,7 +476,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final order = pastOrders[index];
-        final bool isCompleted = order["status"] == "delivered";
+        final bool isCompleted = order["status"] == "completed";
         final Color statusColor = isCompleted ? Colors.green : Colors.red;
         final Color statusBgColor =
             isCompleted ? Colors.green[50]! : Colors.red[50]!;
@@ -460,7 +501,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               onTap:
                   isCompleted ? () => _navigateToDeliveryReview(order) : null,
               child: Padding(
-                padding: EdgeInsets.all(14),
+                padding: EdgeInsets.all(16),
                 child: Row(
                   children: [
                     ClipRRect(
