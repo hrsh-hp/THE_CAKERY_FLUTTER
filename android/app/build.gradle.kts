@@ -8,10 +8,12 @@ plugins {
 import java.util.*
 
 val dotenv = Properties()
-val envFile = rootProject.file(".env")
-
+val envFile = rootProject.file("../.env")
 if (envFile.exists()) {
-    dotenv.load(envFile.inputStream()) // Corrected way to load .env
+    dotenv.load(envFile.inputStream())
+} else {
+    println(".env file not found")
+    println("Project root path: " + rootProject.projectDir.absolutePath)
 }
 
 android {
@@ -37,7 +39,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = dotenv.getProperty("GOOGLE_MAPS_API_KEY", "")
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = dotenv.getProperty("GOOGLE_MAPS_API_KEY", "Hey")
     }   
 
     buildTypes {

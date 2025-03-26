@@ -73,9 +73,10 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _editAddress() {
-    TextEditingController addressController = TextEditingController(
-      text: selectedLocation,
-    );
+    TextEditingController streetController = TextEditingController();
+    TextEditingController cityController = TextEditingController();
+    TextEditingController stateController = TextEditingController();
+    TextEditingController zipController = TextEditingController();
 
     showDialog(
       context: context,
@@ -88,17 +89,23 @@ class _CartScreenState extends State<CartScreen> {
             "Edit Delivery Address",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: TextField(
-            controller: addressController,
-            decoration: InputDecoration(
-              hintText: "Enter new address",
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              filled: true,
-              fillColor: Colors.grey[50],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTextField(streetController, "Street"),
+                SizedBox(height: 8),
+                _buildTextField(cityController, "City"),
+                SizedBox(height: 8),
+                _buildTextField(stateController, "State"),
+                SizedBox(height: 8),
+                _buildTextField(
+                  zipController,
+                  "Zip Code",
+                  keyboardType: TextInputType.number,
+                ),
+              ],
             ),
-            maxLines: 2,
           ),
           actions: [
             TextButton(
@@ -109,7 +116,8 @@ class _CartScreenState extends State<CartScreen> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  selectedLocation = addressController.text;
+                  selectedLocation =
+                      "${streetController.text}, ${cityController.text}, ${stateController.text} - ${zipController.text}";
                 });
                 Navigator.pop(context);
               },
@@ -125,6 +133,23 @@ class _CartScreenState extends State<CartScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hint,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      keyboardType: keyboardType,
     );
   }
 

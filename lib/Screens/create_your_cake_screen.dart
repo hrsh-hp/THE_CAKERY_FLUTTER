@@ -5,14 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:the_cakery/utils/constants.dart';
 
-class AddCakeScreen extends StatefulWidget {
-  const AddCakeScreen({super.key});
+class CreateYourCakeScreen extends StatefulWidget {
+  const CreateYourCakeScreen({super.key});
 
   @override
-  _AddCakeScreenState createState() => _AddCakeScreenState();
+  _CreateYourCakeScreenState createState() => _CreateYourCakeScreenState();
 }
 
-class _AddCakeScreenState extends State<AddCakeScreen> {
+class _CreateYourCakeScreenState extends State<CreateYourCakeScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
@@ -21,16 +21,18 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   bool _availableToppings = true;
   XFile? _selectedImage;
+  int quantity = 1;
+  String selectedSize = "";
+  double selectedPrice = 0.0;
+  String selectedSizeSlug = "";
 
   // Size options
-  final List<Map<String, dynamic>> _sizes = [
-    {'size': '', 'price': ''},
-  ];
+  List<Map<String, dynamic>> sizeOptions = [];
 
-  // Available toppings from backend
+  // Available toppings and sponges from backend
   List<Map<String, dynamic>> _Toppings = [];
   List<Map<String, dynamic>> _Sponges = [];
-  final List<String> _selectedToppingSlugs = [];
+  List<String> _selectedToppingSlugs = [];
   bool _isLoading = false;
   String? _selectedSpongeSlug;
 
@@ -39,8 +41,38 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
     super.initState();
     _fetchToppings();
     _fetchSponges();
-    if (_Sponges.isNotEmpty) {
-      _selectedSpongeSlug = _Sponges.first['slug'];
+    _fetchSizes();
+  }
+
+  Future<void> _fetchSizes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Constants.baseUrl}/cake/sizes'),
+        headers: {
+          "Authorization": "Token ${Constants.prefs.getString("token")}",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)["data"];
+        setState(() {
+          sizeOptions = List<Map<String, dynamic>>.from(data);
+          if (sizeOptions.isNotEmpty) {
+            selectedSizeSlug = sizeOptions[0]['slug'];
+            selectedSize = sizeOptions[0]['size'];
+            selectedPrice = double.parse(sizeOptions[0]['price'].toString());
+          }
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to fetch sizes"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -85,12 +117,15 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
         final data = json.decode(response.body)["data"];
         setState(() {
           _Sponges = List<Map<String, dynamic>>.from(data);
+          if (_Sponges.isNotEmpty) {
+            _selectedSpongeSlug = _Sponges.first['slug'];
+          }
         });
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to fetch toppings"),
+          content: Text("Failed to fetch sponges"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -117,78 +152,62 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
     }
   }
 
-  void _addSizeField() {
-    setState(() {
-      _sizes.add({'size': '', 'price': ''});
-    });
-  }
-
-  void _removeSizeField(int index) {
-    if (_sizes.length > 1) {
-      setState(() {
-        _sizes.removeAt(index);
-      });
-    }
-  }
-
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Please select an image"),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+  double calculateTotalPrice() {
+    double toppingPrice = _selectedToppingSlugs.fold(0, (sum, toppingSlug) {
+      final topping = _Toppings.firstWhere(
+        (t) => t['slug'] == toppingSlug,
+        orElse: () => {'price': '0'},
       );
-      return;
-    }
+      return sum + double.parse(topping['price'].toString());
+    });
+    return (selectedPrice + toppingPrice) * quantity;
+  }
+
+  Future<void> _addToCart() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // Create multipart request
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('${Constants.baseUrl}/cake/add/'),
+        Uri.parse('${Constants.baseUrl}/cake/custom/add_to_cart/'),
       );
 
-      // Add headers
       request.headers.addAll({
         "Authorization": "Token ${Constants.prefs.getString("token")}",
       });
 
-      // Add image file
-      request.files.add(
-        await http.MultipartFile.fromPath('image', _selectedImage!.path),
-      );
+      if (_selectedImage != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', _selectedImage!.path),
+        );
+      }
 
-      // Add other fields
       request.fields.addAll({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'available_toppings': _availableToppings.toString(),
-        'sizes': json.encode(_sizes),
+        'size_slug': selectedSizeSlug,
+        'quantity': quantity.toString(),
         'toppings': json.encode(_selectedToppingSlugs),
         'sponge': _selectedSpongeSlug ?? '',
       });
 
-      // Send request
       final response = await request.send();
       final responseData = await response.stream.bytesToString();
       final decodedResponse = json.decode(responseData);
 
       if (response.statusCode == 200 && decodedResponse["success"] == true) {
-        Navigator.pop(context);
+        Navigator.pushReplacementNamed(context, '/cart');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Cake added successfully!"),
+            content: Text("Custom cake added to cart!"),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
-        throw Exception(decodedResponse["message"] ?? "Failed to add cake");
+        throw Exception(decodedResponse["message"] ?? "Failed to add to cart");
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -208,7 +227,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Add New Cake",
+          "Create Your Own Cake",
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
@@ -252,7 +271,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              "Add Cake Image",
+                              "Add Reference Image (Optional)",
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 16,
@@ -266,7 +285,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
 
             // Basic Details
             Text(
-              "Basic Details",
+              "Cake Details",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -277,7 +296,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
             TextFormField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: "Cake Name",
+                labelText: "Give your cake a name",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -286,12 +305,14 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
               ),
               validator: (value) {
                 if (value?.isEmpty ?? true) {
-                  return "Please enter cake name";
+                  return "Please enter a name for your cake";
                 }
                 return null;
               },
             ),
             SizedBox(height: 16),
+
+            // Sponge Selection
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
@@ -361,15 +382,58 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
                                     width: 2,
                                   ),
                                 ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.red,
+                                    width: 1,
+                                  ),
+                                ),
                                 filled: true,
                                 fillColor: Colors.grey[50],
+                                hintText: "Select a sponge type",
+                                errorStyle: TextStyle(
+                                  color: Colors.red[700],
+                                  fontSize: 12,
+                                ),
                               ),
+                              icon: Icon(
+                                Icons.arrow_drop_down_circle_outlined,
+                                color: Colors.brown,
+                              ),
+                              isExpanded: true,
                               items:
-                                  _Sponges.map((sponge) {
+                                  _Sponges.map<DropdownMenuItem<String>>((
+                                    sponge,
+                                  ) {
                                     return DropdownMenuItem<String>(
                                       value: sponge['slug'],
-                                      child: Text(
-                                        "${sponge['sponge']} - ${sponge['price']}",
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: Colors.brown[100],
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.cake_outlined,
+                                              size: 14,
+                                              color: Colors.brown,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              "${sponge['sponge']} - ${sponge['price']}",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[800],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     );
                                   }).toList(),
@@ -380,7 +444,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
                               },
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return "Please select a sponge";
+                                  return "Please select a sponge type";
                                 }
                                 return null;
                               },
@@ -390,11 +454,13 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
               ),
             ),
             SizedBox(height: 16),
+
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
               decoration: InputDecoration(
-                labelText: "Description",
+                labelText: "Special Instructions",
+                hintText: "Add any special requirements or instructions",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -403,173 +469,168 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
               ),
               validator: (value) {
                 if (value?.isEmpty ?? true) {
-                  return "Please enter description";
+                  return "Please add some instructions";
                 }
                 return null;
               },
             ),
-            SizedBox(height: 16),
-            SwitchListTile(
-              title: Text("Available Toppings"),
-              value: _availableToppings,
-              onChanged: (value) {
-                setState(() {
-                  _availableToppings = value;
-                  if (!value) {
-                    _selectedToppingSlugs.clear();
-                  }
-                });
-              },
-              tileColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey[300]!),
-              ),
-            ),
             SizedBox(height: 24),
 
-            // Sizes Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Size Options",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.brown[800],
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: _addSizeField,
-                  icon: Icon(Icons.add),
-                  label: Text("Add Size"),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            ..._sizes.asMap().entries.map((entry) {
-              int idx = entry.key;
-              Map<String, dynamic> sizeData = entry.value;
-              return Container(
-                margin: EdgeInsets.only(bottom: 16),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: sizeData['size'],
-                            decoration: InputDecoration(
-                              labelText: "Size Name",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value?.isEmpty ?? true) {
-                                return "Please enter size name";
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              _sizes[idx]['size'] = value;
-                            },
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: sizeData['price'],
-                            decoration: InputDecoration(
-                              labelText: "Price",
-                              prefixText: "₹",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value?.isEmpty ?? true) {
-                                return "Please enter price";
-                              }
-                              if (double.tryParse(value!) == null) {
-                                return "Invalid price";
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              _sizes[idx]['price'] = value;
-                            },
-                          ),
-                        ),
-                        if (_sizes.length > 1)
-                          IconButton(
-                            icon: Icon(Icons.delete_outline, color: Colors.red),
-                            onPressed: () => _removeSizeField(idx),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            if (_availableToppings) ...[
-              SizedBox(height: 24),
-              Text(
-                "Available Toppings",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.brown[800],
-                ),
+            // Size Selection
+            Text(
+              "Choose Size",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.brown[800],
               ),
-              SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+            ),
+            SizedBox(height: 12),
+            Container(
+              height: 50,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
                 children:
-                    _Toppings.map((topping) {
-                      final isSelected = _selectedToppingSlugs.contains(
-                        topping['slug'],
-                      );
-                      return FilterChip(
-                        label: Text(
-                          "${topping['name']} (₹${topping['price']})",
-                        ),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedToppingSlugs.add(topping['slug']);
-                            } else {
-                              _selectedToppingSlugs.remove(topping['slug']);
-                            }
-                          });
-                        },
-                        backgroundColor: Colors.white,
-                        selectedColor: Colors.brown[100],
-                        checkmarkColor: Colors.brown,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color:
-                                isSelected ? Colors.brown : Colors.grey[300]!,
+                    sizeOptions.map((size) {
+                      final isSelected = selectedSizeSlug == size['slug'];
+                      return Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: Material(
+                          color: isSelected ? Colors.brown : Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          elevation: isSelected ? 4 : 1,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                selectedSizeSlug = size['slug'];
+                                selectedSize = size['size'];
+                                selectedPrice = double.parse(
+                                  size['price'].toString(),
+                                );
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(25),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              child: Text(
+                                "${size['size']} - ₹${double.parse(size['price'].toString()).toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  color:
+                                      isSelected ? Colors.white : Colors.brown,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
                     }).toList(),
               ),
-            ],
+            ),
+            SizedBox(height: 24),
 
-            SizedBox(height: 10),
+            // Toppings Selection
+            Text(
+              "Select Toppings",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.brown[800],
+              ),
+            ),
+            SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  _Toppings.map((topping) {
+                    final isSelected = _selectedToppingSlugs.contains(
+                      topping['slug'],
+                    );
+                    return FilterChip(
+                      label: Text("${topping['name']} (₹${topping['price']})"),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedToppingSlugs.add(topping['slug']);
+                          } else {
+                            _selectedToppingSlugs.remove(topping['slug']);
+                          }
+                        });
+                      },
+                      backgroundColor: Colors.white,
+                      selectedColor: Colors.brown[100],
+                      checkmarkColor: Colors.brown,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected ? Colors.brown : Colors.grey[300]!,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+            ),
+            SizedBox(height: 24),
+
+            // Quantity Selection
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.brown[50],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Quantity",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown[800],
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove),
+                          onPressed:
+                              quantity > 1
+                                  ? () => setState(() => quantity--)
+                                  : null,
+                          color: Colors.brown,
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            "$quantity",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add),
+                          onPressed: () => setState(() => quantity++),
+                          color: Colors.brown,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12), // Space for bottom button
           ],
         ),
       ),
@@ -587,7 +648,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
         ),
         child: SafeArea(
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _submitForm,
+            onPressed: _isLoading ? null : _addToCart,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.brown,
               padding: EdgeInsets.symmetric(vertical: 16),
@@ -607,7 +668,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
                       ),
                     )
                     : Text(
-                      "Add Cake",
+                      "Add to Cart • ₹${calculateTotalPrice().toStringAsFixed(2)}",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

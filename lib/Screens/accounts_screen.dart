@@ -127,6 +127,21 @@ class _AccountsScreenState extends State<AccountsScreen> {
         ),
       ];
     }
+    if (Constants.prefs.getString('role') == 'user') {
+      return [
+        ListTile(
+          leading: const Icon(Icons.add),
+          title: const Text("Create Your Cake"),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            borderRadius: BorderRadius.zero,
+          ),
+          onTap: () {
+            Navigator.pushNamed(context, "/create_cakes");
+          },
+        ),
+      ];
+    }
     if (Constants.prefs.getString('role') == 'delivery_person') {
       return [
         ListTile(

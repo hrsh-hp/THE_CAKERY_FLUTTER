@@ -38,7 +38,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
     super.initState();
     _addressController = TextEditingController(text: widget.initialAddress);
     _selectedLocation = LatLng(widget.initialLatitude, widget.initialLongitude);
-    
+
     if (widget.initialLatitude == 0.0 && widget.initialLongitude == 0.0) {
       _getCurrentLocation();
     } else {
@@ -68,7 +68,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final location = loc.Location();
 
@@ -96,14 +96,16 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
       }
 
       setState(() {
-        _selectedLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        _selectedLocation = LatLng(
+          locationData.latitude!,
+          locationData.longitude!,
+        );
         _updateMarker();
         _isMapReady = true;
       });
 
       // Get address for current location
       _getAddressFromCoordinates(_selectedLocation);
-      
     } catch (e) {
       _showErrorSnackBar('Failed to get current location: $e');
     } finally {
@@ -130,8 +132,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
           place.locality,
           place.postalCode,
           place.country,
-        ].where((element) => element != null && element.isNotEmpty)
-            .join(', ');
+        ].where((element) => element != null && element.isNotEmpty).join(', ');
 
         setState(() {
           _addressController.text = address;
@@ -194,10 +195,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
       appBar: AppBar(
         title: Text(
           "Edit Address",
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -236,14 +234,15 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        suffixIcon: _isAddressLoading
-                            ? Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : null,
+                        suffixIcon:
+                            _isAddressLoading
+                                ? Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : null,
                       ),
                       maxLines: 3,
                       onChanged: (value) {
@@ -263,41 +262,45 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
                 ),
               ),
               Expanded(
-                child: _isMapReady
-                    ? Container(
-                        margin: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
+                child:
+                    _isMapReady
+                        ? Container(
+                          margin: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: GoogleMap(
+                              onMapCreated: _onMapCreated,
+                              initialCameraPosition: CameraPosition(
+                                target: _selectedLocation,
+                                zoom: 15,
+                              ),
+                              mapType: MapType.satellite,
+                              markers: _markers,
+                              onTap: _onMapTap,
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: true,
+                              zoomControlsEnabled: true,
+                              mapToolbarEnabled: false,
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: GoogleMap(
-                            onMapCreated: _onMapCreated,
-                            initialCameraPosition: CameraPosition(
-                              target: _selectedLocation,
-                              zoom: 15,
+                          ),
+                        )
+                        : Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.brown,
                             ),
-                            markers: _markers,
-                            onTap: _onMapTap,
-                            myLocationEnabled: true,
-                            myLocationButtonEnabled: true,
-                            zoomControlsEnabled: true,
-                            mapToolbarEnabled: false,
                           ),
                         ),
-                      )
-                    : Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.brown),
-                        ),
-                      ),
               ),
               Container(
                 padding: EdgeInsets.all(16),
@@ -315,10 +318,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
                   children: [
                     Text(
                       "Selected coordinates: ${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 16),

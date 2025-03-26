@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:the_cakery/Screens/add_cakes.dart';
+import 'package:the_cakery/Screens/admin_orders.dart';
 import 'package:the_cakery/Screens/cart_screen.dart';
+import 'package:the_cakery/Screens/create_your_cake_screen.dart';
 import 'package:the_cakery/Screens/edit_profile.dart';
 import 'package:the_cakery/Screens/favourites_screen.dart';
 import 'package:the_cakery/Screens/home_screen.dart';
@@ -57,7 +59,11 @@ class MyApp extends StatelessWidget {
           case "/home":
             return NavigationUtils.fadeRoute(const HomeScreen());
           case "/orders":
-            return NavigationUtils.fadeRoute(OrdersScreen());
+            if (Constants.prefs.getString('role') == 'admin') {
+              return NavigationUtils.fadeRoute(AdminOrdersScreen());
+            } else {
+              return NavigationUtils.fadeRoute(OrdersScreen());
+            }
           case "/cart":
             return NavigationUtils.fadeRoute(CartScreen());
           case "/favorites":
@@ -66,6 +72,8 @@ class MyApp extends StatelessWidget {
             return NavigationUtils.slideRoute(EditProfileScreen());
           case "/add_cakes":
             return NavigationUtils.slideRoute(AddCakeScreen());
+          case "/create_cakes":
+            return NavigationUtils.slideRoute(CreateYourCakeScreen());
         }
         return null;
       },

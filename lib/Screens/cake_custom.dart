@@ -28,6 +28,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
   String description = "";
   String cakeSlug = "";
   String selectedSizeSlug = "";
+  double _spongePrice = 0.0;
   Map<String, dynamic> toppingsOptions = {};
   Map<String, Map<String, dynamic>> sizeOptions = {};
 
@@ -41,7 +42,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     double toppingPrice = selectedToppings.fold(0, (sum, toppingSlug) {
       return sum + (toppingsOptions[toppingSlug]?["price"] ?? 0.0);
     });
-    return (selectedPrice + toppingPrice) * quantity;
+    return (selectedPrice + toppingPrice + _spongePrice) * quantity;
   }
 
   Future<void> fetchCakeDetails() async {
@@ -68,7 +69,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
           likes = data["likes_count"];
           cakeSlug = data["slug"];
           availableToppings = data["available_toppings"];
-
+          _spongePrice = double.parse(data['sponge']['price']);
           sizeOptions = {
             for (var size in (data["sizes"] ?? []))
               size["slug"]: {
@@ -77,7 +78,6 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                     double.tryParse(size["price"]?.toString() ?? "0.0") ?? 0.0,
               },
           };
-
           selectedSizeSlug = sizeOptions.keys.first;
           selectedSize = sizeOptions[selectedSizeSlug]?["name"] ?? "Medium";
           selectedPrice = sizeOptions[selectedSizeSlug]?["price"] ?? 0.0;
@@ -371,6 +371,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                             SizedBox(height: 12),
                             SizedBox(
                               height: 50,
+
                               child: ListView(
                                 scrollDirection: Axis.horizontal,
                                 children:
@@ -428,7 +429,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                     }).toList(),
                               ),
                             ),
-                            SizedBox(height: 24),
+                            SizedBox(height: 20),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -628,13 +629,29 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                 ),
                 elevation: 0,
               ),
-              child: Text(
-                "Add to Cart • ₹${calculateTotalPrice().toStringAsFixed(2)}",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize
+                        .min, // Ensures the button doesn't expand unnecessarily
+                children: [
+                  Text(
+                    "Add to Cart • ₹${calculateTotalPrice().toStringAsFixed(2)}",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  // SizedBox(height: 4), // Small spacing between texts
+                  Text(
+                    "( ${_spongePrice.toStringAsFixed(2)}₹ / Sponge is included )",
+                    style: TextStyle(
+                      fontSize: 10, // Smaller font size
+                      fontWeight: FontWeight.w400, // Regular weight
+                      color: Colors.white70, // Slightly faded color for caution
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

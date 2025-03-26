@@ -71,7 +71,7 @@ class BottomNavBar extends StatelessWidget {
                 ? _filledIcons[index]
                 : _outlinedIcons[index],
           ),
-          label: ["Home", "My Orders", "Favorites", "Cart", "Account"][index],
+          label: ["Home", "Orders", "Favorites", "Cart", "Account"][index],
         );
       }),
     );

@@ -167,12 +167,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
           "My Orders",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
+        automaticallyImplyLeading: false,
+        centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
-        automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black87),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
@@ -212,7 +213,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   color: Colors.black87,
                                 ),
                               ),
-                              SizedBox(height: 16),
+                              // SizedBox(height: 8),
                               if (pastOrders.isEmpty)
                                 _buildEmptyState(
                                   "No Past Orders",
@@ -476,11 +477,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final order = pastOrders[index];
-        final bool isCompleted = order["status"] == "completed";
+        final bool isCompleted = order["status"] == "delivered";
         final Color statusColor = isCompleted ? Colors.green : Colors.red;
         final Color statusBgColor =
             isCompleted ? Colors.green[50]! : Colors.red[50]!;
-
         return Container(
           margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
           decoration: BoxDecoration(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:the_cakery/Screens/accounts_screen.dart';
 import 'package:the_cakery/Screens/cake_custom.dart';
+import 'package:the_cakery/Screens/edit_cake_screen.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
 import 'package:the_cakery/utils/constants.dart';
 
@@ -279,20 +280,29 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         try {
-          final Map<String, dynamic>? result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CakeCustomScreen(slug: cake["slug"]),
-            ),
-          );
+          if (Constants.prefs.getString("role") == "admin") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EditCakeScreen(slug: cake["slug"]),
+              ),
+            );
+          } else {
+            final Map<String, dynamic>? result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CakeCustomScreen(slug: cake["slug"]),
+              ),
+            );
 
-          if (result != null) {
-            final bool newLikedStatus = result["isLiked"];
-            final int newLikeCount = result["likes"];
+            if (result != null) {
+              final bool newLikedStatus = result["isLiked"];
+              final int newLikeCount = result["likes"];
 
-            if (cake["liked"] != newLikedStatus ||
-                cake["likes_count"] != newLikeCount) {
-              _updateLikedStatus(cake["slug"], newLikedStatus, newLikeCount);
+              if (cake["liked"] != newLikedStatus ||
+                  cake["likes_count"] != newLikeCount) {
+                _updateLikedStatus(cake["slug"], newLikedStatus, newLikeCount);
+              }
             }
           }
         } catch (e) {
