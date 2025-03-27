@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 // import 'package:url_launcher/url_launcher.dart';
 
 class AdminOrderDetailScreen extends StatelessWidget {
@@ -12,17 +13,14 @@ class AdminOrderDetailScreen extends StatelessWidget {
     required this.orderDetails,
   }) : super(key: key);
 
-  // Future<void> _makePhoneCall(String phoneNumber) async {
-  //   final Uri launchUri = Uri(
-  //     scheme: 'tel',
-  //     path: phoneNumber.toString(),
-  //   );
-  //   if (await canLaunchUrl(launchUri)) {
-  //     await launchUrl(launchUri);
-  //   } else {
-  //     throw 'Could not launch $launchUri';
-  //   }
-  // }
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber.toString());
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      throw 'Could not launch $launchUri';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +280,10 @@ class AdminOrderDetailScreen extends StatelessWidget {
                                 ),
                               ),
                               IconButton(
-                                onPressed: () {},
+                                onPressed:
+                                    () => _makePhoneCall(
+                                      deliveryPerson["phone"].toString(),
+                                    ),
                                 icon: const Icon(
                                   Icons.phone,
                                   color: Colors.brown,

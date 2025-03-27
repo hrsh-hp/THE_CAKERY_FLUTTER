@@ -37,11 +37,44 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchToppings();
-    _fetchSponges();
-    if (_Sponges.isNotEmpty) {
-      _selectedSpongeSlug = _Sponges.first['slug'];
-      print('selected sponge $_selectedSpongeSlug');
+    _fetchSponges().then((_) {
+      // Fetch sponges first and then proceed
+      _fetchToppings(); // Fetch toppings after sponges are loaded (optional, but good practice if toppings depend on sponges or for sequential loading)
+      if (_Sponges.isNotEmpty) {
+        setState(() {
+          // Wrap in setState to trigger UI update
+          _selectedSpongeSlug = _Sponges.first['slug'];
+          print('selected sponge $_selectedSpongeSlug');
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchSponges() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Constants.baseUrl}/cake/sponges'),
+        headers: {
+          "Authorization": "Token ${Constants.prefs.getString("token")}",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)["data"];
+        setState(() {
+          // Wrap in setState to trigger UI update after _Sponges is updated
+          _Sponges = List<Map<String, dynamic>>.from(data);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to fetch sponges"), // Corrected error message
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -59,33 +92,6 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
         final data = json.decode(response.body)["data"];
         setState(() {
           _Toppings = List<Map<String, dynamic>>.from(data);
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to fetch toppings"),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  Future<void> _fetchSponges() async {
-    try {
-      final response = await http.get(
-        Uri.parse('${Constants.baseUrl}/cake/sponges'),
-        headers: {
-          "Authorization": "Token ${Constants.prefs.getString("token")}",
-          "Content-Type": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body)["data"];
-        setState(() {
-          _Sponges = List<Map<String, dynamic>>.from(data);
         });
       }
     } catch (e) {
@@ -179,7 +185,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
       final responseData = await response.stream.bytesToString();
       final decodedResponse = json.decode(responseData);
 
-      if (response.statusCode == 200 && decodedResponse["success"] == true) {
+      if (response.statusCode == 200 || decodedResponse["success"] == true) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -489,7 +495,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
                           child: TextFormField(
                             initialValue: sizeData['price'],
                             decoration: InputDecoration(
-                              labelText: "Price",
+                              labelText: "Price Ratio",
                               prefixText: "₹",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),

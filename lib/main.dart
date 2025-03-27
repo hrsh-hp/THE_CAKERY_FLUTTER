@@ -4,6 +4,7 @@ import 'package:the_cakery/Screens/add_cakes.dart';
 import 'package:the_cakery/Screens/admin_orders.dart';
 import 'package:the_cakery/Screens/cart_screen.dart';
 import 'package:the_cakery/Screens/create_your_cake_screen.dart';
+import 'package:the_cakery/Screens/delivery_person_orderes_screen.dart';
 import 'package:the_cakery/Screens/edit_profile.dart';
 import 'package:the_cakery/Screens/favourites_screen.dart';
 import 'package:the_cakery/Screens/home_screen.dart';
@@ -61,6 +62,8 @@ class MyApp extends StatelessWidget {
           case "/orders":
             if (Constants.prefs.getString('role') == 'admin') {
               return NavigationUtils.fadeRoute(AdminOrdersScreen());
+            } else if (Constants.prefs.getString('role') == 'delivery_person') {
+              return NavigationUtils.fadeRoute(DeliveryPersonOrdersScreen());
             } else {
               return NavigationUtils.fadeRoute(OrdersScreen());
             }

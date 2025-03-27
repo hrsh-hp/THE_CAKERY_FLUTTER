@@ -31,10 +31,10 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   String selectedSponge = "";
   List<String> selectedToppings = [];
   Map<String, List<String>> selectedExtras = {
-    'filling': [],
-    'candle': [],
-    'color': [],
-    'decoration': [],
+    'fillings': [],
+    'candles': [],
+    'colors': [],
+    'decorations': [],
     'packaging': [],
   };
   int quantity = 1;
@@ -721,13 +721,13 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                     Divider(color: Colors.grey[300], height: 24),
                     _buildToppingsSection(),
                     Divider(color: Colors.grey[300], height: 24),
-                    _buildExtrasSection('filling', 'Filling'),
+                    _buildExtrasSection('fillings', 'Filling'),
                     Divider(color: Colors.grey[300], height: 24),
-                    _buildExtrasSection('candle', 'Candle'),
+                    _buildExtrasSection('candles', 'Candle'),
                     Divider(color: Colors.grey[300], height: 24),
-                    _buildExtrasSection('color', 'Color'),
+                    _buildExtrasSection('colors', 'Color'),
                     Divider(color: Colors.grey[300], height: 24),
-                    _buildExtrasSection('decoration', 'Decoration'),
+                    _buildExtrasSection('decorations', 'Decoration'),
                     Divider(color: Colors.grey[300], height: 24),
                     _buildExtrasSection('packaging', 'Packaging'),
                     Divider(color: Colors.grey[300], height: 16),

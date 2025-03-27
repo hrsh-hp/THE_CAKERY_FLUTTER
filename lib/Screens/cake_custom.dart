@@ -43,7 +43,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     double toppingPrice = selectedToppings.fold(0, (sum, toppingSlug) {
       return sum + (toppingsOptions[toppingSlug]?["price"] ?? 0.0);
     });
-    return (selectedPrice + toppingPrice + _spongePrice) * quantity;
+    return (toppingPrice + (_spongePrice * selectedPrice)) * quantity;
   }
 
   Future<void> fetchCakeDetails() async {
@@ -435,7 +435,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                                 vertical: 15,
                                               ),
                                               child: Text(
-                                                "$sizeName - ₹${price.toStringAsFixed(2)}",
+                                                "$sizeName ",
                                                 style: TextStyle(
                                                   color:
                                                       isSelected

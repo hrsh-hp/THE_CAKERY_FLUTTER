@@ -74,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: fetchCakes,
         child: SingleChildScrollView(
+          primary: true,
           physics: AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,16 +374,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      cake["name"],
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.brown[800],
+                    SizedBox(
+                      height: 20, // Ensure it has a defined height
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: AlwaysScrollableScrollPhysics(),
+                        child: Text(
+                          cake["name"],
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown[800],
+                          ),
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

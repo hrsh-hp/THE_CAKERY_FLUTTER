@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Import CachedNetworkImage
 import 'package:the_cakery/utils/constants.dart';
 
 class AccountsScreen extends StatefulWidget {
@@ -15,7 +16,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _fetchUserData();
   }
@@ -28,14 +28,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
     });
   }
 
-  void _logout(context) async {
+  void _logout(BuildContext context) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Confirm Logout"),
           content: const Text("Are you sure you want to log out?"),
-          actions: [
+          actions: <Widget>[
+            // Use <Widget> for clarity
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -70,38 +71,96 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Widget build(BuildContext context) {
     return Drawer(
       child: Column(
-        children: [
+        children: <Widget>[
+          // Use <Widget> for clarity
           UserAccountsDrawerHeader(
-            accountName: Text(_userName),
-            accountEmail: Text(_userEmail),
+            decoration: BoxDecoration(
+              // Add decoration for header background
+              color:
+                  Theme.of(context)
+                      .colorScheme
+                      .primaryContainer, // Use primaryContainer for a softer background
+            ),
+            accountName: Text(
+              _userName,
+              style: TextStyle(
+                fontWeight: FontWeight.bold, // Make username bolder
+                color:
+                    Theme.of(context)
+                        .colorScheme
+                        .onPrimaryContainer, // Ensure text color is accessible
+              ),
+            ),
+            accountEmail: Text(
+              _userEmail,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer
+                    .withOpacity(0.8), // Slightly less opaque email
+              ),
+            ),
             currentAccountPicture: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.surfaceDim,
-              backgroundImage:
-                  _profilePicture != null
-                      ? NetworkImage(_profilePicture!)
-                      : null,
+              backgroundColor:
+                  Theme.of(context)
+                      .colorScheme
+                      .surfaceVariant, // Use surfaceVariant for a subtle background
+              foregroundImage:
+                  _profilePicture != null && _profilePicture!.isNotEmpty
+                      ? CachedNetworkImageProvider(
+                        // Use CachedNetworkImageProvider for better caching
+                        _profilePicture!,
+                      )
+                      : null, // foregroundImage handles background color better than backgroundImage
               child:
-                  _profilePicture == null
-                      ? const Icon(Icons.person, size: 50, color: Colors.brown)
+                  _profilePicture == null || _profilePicture!.isEmpty
+                      ? Icon(
+                        Icons.person,
+                        size: 50,
+                        color:
+                            Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant, // Use onSurfaceVariant for icon color
+                      )
                       : null,
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text("Edit Profile"),
+            leading: Icon(
+              Icons.edit,
+              color: Theme.of(context).iconTheme.color,
+            ), // Use theme icon color
+            title: Text(
+              "Edit Profile",
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ), // Use theme text color
             shape: LinearBorder.end(
-              side: BorderSide(color: Colors.grey.shade300, width: 1),
+              side: BorderSide(
+                color: Colors.grey.shade300,
+                width: 0.8,
+              ), // Slightly thinner border
             ),
             onTap: () {
               Navigator.pushNamed(context, "/editprofile");
             },
           ),
-          ..._buildAdminMenu(), // ✅ Correct way to conditionally add widgets
+          ..._buildAdminMenu(),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text("Logout"),
+            leading: Icon(
+              Icons.logout,
+              color: Theme.of(context).iconTheme.color,
+            ), // Use theme icon color
+            title: Text(
+              "Logout",
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ), // Use theme text color
             shape: RoundedRectangleBorder(
-              side: BorderSide(color: Colors.grey.shade300, width: 1),
+              side: BorderSide(
+                color: Colors.grey.shade300,
+                width: 0.8,
+              ), // Slightly thinner border
               borderRadius: BorderRadius.zero,
             ),
             onTap: () => _logout(context),
@@ -112,28 +171,51 @@ class _AccountsScreenState extends State<AccountsScreen> {
   }
 
   List<Widget> _buildAdminMenu() {
-    if (Constants.prefs.getString('role') == 'admin') {
+    final role = Constants.prefs.getString('role');
+    TextStyle listTileTextStyle = TextStyle(
+      color: Theme.of(context).textTheme.bodyLarge?.color,
+    ); // Define text style once
+    Color listTileIconColor =
+        Theme.of(context).iconTheme.color!; // Define icon color once
+    BorderSide listTileBorderSide = BorderSide(
+      color: Colors.grey.shade300,
+      width: 0.8,
+    ); // Define border side once
+
+    if (role == 'admin') {
       return [
         ListTile(
-          leading: const Icon(Icons.add),
-          title: const Text("Add Cakes"),
+          leading: Icon(
+            Icons.add_box_rounded,
+            color: listTileIconColor,
+          ), // More relevant icon
+          title: Text(
+            "Add Cakes",
+            style: listTileTextStyle,
+          ), // More descriptive text
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            side: listTileBorderSide,
             borderRadius: BorderRadius.zero,
           ),
           onTap: () {
-            Navigator.pushNamed(context, "/add_cakes");
+            Navigator.pushNamed(
+              context,
+              "/add_cakes",
+            ); // Consider renaming route to "/manage_cakes"
           },
         ),
       ];
     }
-    if (Constants.prefs.getString('role') == 'user') {
+    if (role == 'user') {
       return [
         ListTile(
-          leading: const Icon(Icons.add),
-          title: const Text("Create Your Cake"),
+          leading: Icon(
+            Icons.cake_rounded,
+            color: listTileIconColor,
+          ), // More relevant icon
+          title: Text("Create Your Cake", style: listTileTextStyle),
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            side: listTileBorderSide,
             borderRadius: BorderRadius.zero,
           ),
           onTap: () {
@@ -142,17 +224,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
         ),
       ];
     }
-    if (Constants.prefs.getString('role') == 'delivery_person') {
+    if (role == 'delivery_person') {
       return [
         ListTile(
-          leading: const Icon(Icons.add),
-          title: const Text("My Orderes"),
+          leading: Icon(
+            Icons.delivery_dining_rounded,
+            color: listTileIconColor,
+          ), // More relevant icon
+          title: Text(
+            "Delivery Orders",
+            style: listTileTextStyle,
+          ), // More descriptive text
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.grey.shade300, width: 1),
+            side: listTileBorderSide,
             borderRadius: BorderRadius.zero,
           ),
           onTap: () {
-            Navigator.pushNamed(context, "/deliveryorders");
+            Navigator.pushNamed(context, "/orders");
           },
         ),
       ];
