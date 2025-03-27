@@ -41,6 +41,7 @@ class _AddCakeScreenState extends State<AddCakeScreen> {
     _fetchSponges();
     if (_Sponges.isNotEmpty) {
       _selectedSpongeSlug = _Sponges.first['slug'];
+      print('selected sponge $_selectedSpongeSlug');
     }
   }
 

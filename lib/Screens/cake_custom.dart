@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:the_cakery/Screens/create_your_cake_screen.dart';
 import 'package:the_cakery/utils/constants.dart';
 
 class CakeCustomScreen extends StatefulWidget {
@@ -168,6 +169,28 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
         return true;
       },
       child: Scaffold(
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CreateYourCakeScreen()),
+            );
+          },
+          backgroundColor: Colors.brown[200],
+          label: Row(
+            children: [
+              Icon(Icons.cake, color: Colors.brown[900]),
+              SizedBox(width: 8),
+              Text(
+                "Customize",
+                style: TextStyle(
+                  color: Colors.brown[900],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
         body:
             isLoading
                 ? Center(
@@ -371,7 +394,6 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                             SizedBox(height: 12),
                             SizedBox(
                               height: 50,
-
                               child: ListView(
                                 scrollDirection: Axis.horizontal,
                                 children:
@@ -590,7 +612,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                                 ],
                               ),
                             ),
-                            SizedBox(height: 10), // Space for bottom button
+                            SizedBox(height: 50),
                           ],
                         ),
                       ),
@@ -630,9 +652,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                 elevation: 0,
               ),
               child: Column(
-                mainAxisSize:
-                    MainAxisSize
-                        .min, // Ensures the button doesn't expand unnecessarily
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     "Add to Cart • ₹${calculateTotalPrice().toStringAsFixed(2)}",
@@ -642,13 +662,12 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  // SizedBox(height: 4), // Small spacing between texts
                   Text(
-                    "( ${_spongePrice.toStringAsFixed(2)}₹ / Sponge is included )",
+                    "( ${(_spongePrice * quantity).toStringAsFixed(2)}₹ Sponge Price )",
                     style: TextStyle(
-                      fontSize: 10, // Smaller font size
-                      fontWeight: FontWeight.w400, // Regular weight
-                      color: Colors.white70, // Slightly faded color for caution
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white70,
                     ),
                   ),
                 ],
