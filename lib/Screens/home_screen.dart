@@ -72,27 +72,27 @@ class _HomeScreenState extends State<HomeScreen> {
         scaffoldKey: _scaffoldKey,
       ),
       floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CreateYourCakeScreen()),
-            );
-          },
-          backgroundColor: Colors.brown[200],
-          label: Row(
-            children: [
-              Icon(Icons.cake, color: Colors.brown[900]),
-              SizedBox(width: 8),
-              Text(
-                "Customize",
-                style: TextStyle(
-                  color: Colors.brown[900],
-                  fontWeight: FontWeight.bold,
-                ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CreateYourCakeScreen()),
+          );
+        },
+        backgroundColor: Colors.brown[200],
+        label: Row(
+          children: [
+            Icon(Icons.cake, color: Colors.brown[900]),
+            SizedBox(width: 8),
+            Text(
+              "Customize",
+              style: TextStyle(
+                color: Colors.brown[900],
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       drawer: const AccountsScreen(),
       body: RefreshIndicator(
         onRefresh: fetchCakes,
@@ -305,6 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
         cake['image_url'] is String && (cake['image_url'] as String).isNotEmpty
             ? cake['image_url'] as String
             : null;
+    // print("Images url is ${cake['image_url']}");
     return GestureDetector(
       onTap: () async {
         try {
@@ -365,13 +366,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? Image.network(
                               cake['image_url'],
                               height: 150,
-                              width:
-                                  double
-                                      .infinity, // Needs width for BoxFit.cover to work correctly
+                              // width:
+                              //     double
+                              //         .infinity, // Needs width for BoxFit.cover to work correctly
                               fit: BoxFit.cover,
                               // --- Crucial Part: Error Handling ---
                               errorBuilder: (context, error, stackTrace) {
                                 // On error, return the specific placeholder for this context
+                                print("hello form error $error");
                                 return _buildCakeImageErrorPlaceholder();
                               },
                               // Optional: Basic loading indicator (can be removed)
