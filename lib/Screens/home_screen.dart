@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:the_cakery/Screens/accounts_screen.dart';
 import 'package:the_cakery/Screens/cake_custom.dart';
+import 'package:the_cakery/Screens/create_your_cake_screen.dart';
 import 'package:the_cakery/Screens/edit_cake_screen.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
 import 'package:the_cakery/utils/constants.dart';
@@ -70,6 +71,28 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: 0,
         scaffoldKey: _scaffoldKey,
       ),
+      floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CreateYourCakeScreen()),
+            );
+          },
+          backgroundColor: Colors.brown[200],
+          label: Row(
+            children: [
+              Icon(Icons.cake, color: Colors.brown[900]),
+              SizedBox(width: 8),
+              Text(
+                "Customize",
+                style: TextStyle(
+                  color: Colors.brown[900],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       drawer: const AccountsScreen(),
       body: RefreshIndicator(
         onRefresh: fetchCakes,
@@ -278,6 +301,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCakeItem(BuildContext context, Map<String, dynamic> cake) {
+    cake['image_url'] =
+        cake['image_url'] is String && (cake['image_url'] as String).isNotEmpty
+            ? cake['image_url'] as String
+            : null;
     return GestureDetector(
       onTap: () async {
         try {
@@ -328,11 +355,42 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Image.network(
-                    cake["image_url"],
+                  child: SizedBox(
+                    // Use SizedBox to manage dimensions, width comes from parent context
                     height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                    width:
+                        double.infinity, // Ensure the child tries to fill width
+                    child:
+                        cake['image_url'] != null
+                            ? Image.network(
+                              cake['image_url'],
+                              height: 150,
+                              width:
+                                  double
+                                      .infinity, // Needs width for BoxFit.cover to work correctly
+                              fit: BoxFit.cover,
+                              // --- Crucial Part: Error Handling ---
+                              errorBuilder: (context, error, stackTrace) {
+                                // On error, return the specific placeholder for this context
+                                return _buildCakeImageErrorPlaceholder();
+                              },
+                              // Optional: Basic loading indicator (can be removed)
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null)
+                                  return child; // Image loaded
+                                // Simple grey box matching dimensions while loading
+                                return Container(
+                                  height: 150,
+                                  width: double.infinity,
+                                  color: Colors.grey[200],
+                                );
+                              },
+                            )
+                            : _buildCakeImageErrorPlaceholder(), // Show placeholder if URL is null/empty initially
                   ),
                 ),
                 Positioned(
@@ -423,4 +481,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+Widget _buildCakeImageErrorPlaceholder() {
+  return Container(
+    height: 150,
+    width: double.infinity,
+    color: Colors.grey[300], // Simple background
+    child: Center(
+      // Center the icon within the available space
+      child: Icon(
+        Icons.cake_outlined, // Your desired icon
+        color: Colors.grey[600],
+        size: 60, // Adjusted size for the larger height
+      ),
+    ),
+  );
 }

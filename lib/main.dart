@@ -10,6 +10,7 @@ import 'package:the_cakery/Screens/favourites_screen.dart';
 import 'package:the_cakery/Screens/home_screen.dart';
 import 'package:the_cakery/Screens/initial.dart';
 import 'package:the_cakery/Screens/login.dart';
+import 'package:the_cakery/Screens/manage_cake_options_screen.dart';
 import 'package:the_cakery/Screens/orders_screen.dart';
 import 'package:the_cakery/Screens/register.dart';
 // import 'package:the_cakery/utils/bottom_nav_bar.dart';
@@ -77,6 +78,8 @@ class MyApp extends StatelessWidget {
             return NavigationUtils.slideRoute(AddCakeScreen());
           case "/create_cakes":
             return NavigationUtils.slideRoute(CreateYourCakeScreen());
+          case "/manage_addons":
+            return NavigationUtils.slideRoute(const ManageCakeOptionsScreen());
         }
         return null;
       },

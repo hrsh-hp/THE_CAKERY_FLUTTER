@@ -504,7 +504,7 @@ class _DeliveryReviewScreenState extends State<DeliveryReviewScreen> {
                         ),
                       ),
                     ],
-                  ),
+                    ),
                 ),
                 // --- Add Call Button Here (conditionally) ---
                 if (hasValidPhoneNumber)

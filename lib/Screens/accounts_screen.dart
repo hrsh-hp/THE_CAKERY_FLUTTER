@@ -204,6 +204,26 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ); // Consider renaming route to "/manage_cakes"
           },
         ),
+        ListTile(
+          leading: Icon(
+            Icons.add_box_rounded,
+            color: listTileIconColor,
+          ), // More relevant icon
+          title: Text(
+            "Manage Add-Ons",
+            style: listTileTextStyle,
+          ), // More descriptive text
+          shape: RoundedRectangleBorder(
+            side: listTileBorderSide,
+            borderRadius: BorderRadius.zero,
+          ),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              "/manage_addons",
+            ); // Consider renaming route to "/manage_cakes"
+          },
+        ),
       ];
     }
     if (role == 'user') {

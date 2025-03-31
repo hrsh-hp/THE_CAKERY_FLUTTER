@@ -186,7 +186,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         );
       }
     } on TimeoutException {
-      Navigator.of(context).pop();   // Close loading dialog
+      Navigator.of(context).pop(); // Close loading dialog
       _showErrorSnackBar('Request timed out. Please try again.');
     } catch (e) {
       Navigator.of(context).pop(); // Close loading dialog
@@ -418,29 +418,36 @@ class _OrdersScreenState extends State<OrdersScreen> {
     Map<String, dynamic> order, {
     required bool isCurrent,
   }) {
+    // Variable definitions seem correct
     final String status = order['status'] ?? 'unknown';
-    final String imageUrl =
-        order['items']?[0]?['image_url']; // Safely access image url
+    final dynamic imageUrlDynamic =
+        order['items']?.isNotEmpty == true
+            ? order['items'][0]['image_url']
+            : null;
+    final String? imageUrl =
+        (imageUrlDynamic is String && imageUrlDynamic.isNotEmpty)
+            ? imageUrlDynamic // Use if it's a non-empty string
+            : null;
     final String totalPrice = order['total_price']?.toString() ?? 'N/A';
-    final String orderId =
-        order['slug']?.toString().split('_').first ?? 'N/A'; // Keep if needed
+    final String orderId = order['slug']?.toString().split('_').first ?? 'N/A';
+    // Assume _formatDate exists elsewhere in the class
     final String createdAt = _formatDate(order['created_at']);
     final String deliveryAddress = order['del_address'] ?? 'N/A';
     final String paymentMethod =
         order['payment']?['payment_method']?.toUpperCase() ?? 'N/A';
     final bool isPaid = order['payment']?['is_paid'] ?? false;
 
+    // Widget structure starts here
     return Card(
       elevation: 2.0,
-      margin: EdgeInsets.zero, // Margin is handled by the padding in SliverList
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      // Ensure ColorPalette is defined/imported
       color: ColorPalette.cardBackground,
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
-        onTap:
-            () => _navigateToDetailsOrReview(
-              order,
-            ), // Navigate on tap for ALL orders
+        // Assume _navigateToDetailsOrReview exists elsewhere
+        onTap: () => _navigateToDetailsOrReview(order),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -449,110 +456,139 @@ class _OrdersScreenState extends State<OrdersScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image
+                  // Image section
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8.0),
-                    child: Image.network(
-                      imageUrl,
-                      width: 70,
-                      height: 70,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (context, error, stackTrace) => Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: ColorPalette.greyLight,
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: const Icon(
-                              Icons.cake_outlined,
-                              color: ColorPalette.greyMedium,
-                              size: 35,
-                            ),
-                          ),
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          // Placeholder while loading
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: ColorPalette.greyLight,
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        );
-                      },
-                    ),
+                    // Ternary operator for image/placeholder is correct
+                    child:
+                        (imageUrl != null)
+                            ? Image.network(
+                              imageUrl,
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                              // errorBuilder signature is correct
+                              errorBuilder: (context, error, stackTrace) {
+                                // Ensure buildImagePlaceholder is defined
+                                return buildImagePlaceholder();
+                              },
+                              // loadingBuilder signature is correct
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    // Ensure ColorPalette is defined/imported
+                                    color: ColorPalette.greyLight,
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      // Ternary operator for progress value is correct
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                            // Ternary operator's ':' part is correct
+                            : buildImagePlaceholder(),
                   ),
-                  const SizedBox(width: 16),
-                  // Order Info
+                  const SizedBox(width: 16), // Correct
+                  // Order Info Section
                   Expanded(
+                    // Correct
                     child: Column(
+                      // Correct
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Assume _buildStatusChip exists elsewhere
                         _buildStatusChip(status),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 6), // Correct
                         Text(
-                          "Code for Delivery: $orderId", // Or use full slug if preferred
+                          // Correct
+                          "Code for Delivery: $orderId",
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: ColorPalette.textSecondary),
+                          // Ensure ColorPalette is defined/imported
+                          ?.copyWith(color: ColorPalette.textSecondary),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 4), // Correct
                         Text(
+                          // Correct
                           "₹$totalPrice",
                           style: Theme.of(
                             context,
                           ).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            // Ensure ColorPalette is defined/imported
                             color: ColorPalette.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 4), // Correct
                         Text(
+                          // Correct
                           "Ordered on: $createdAt",
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: ColorPalette.textSecondary),
+                          // Ensure ColorPalette is defined/imported
+                          ?.copyWith(color: ColorPalette.textSecondary),
                         ),
                       ],
                     ),
                   ),
-                  // Action Button (Only for current orders)
-                  if (isCurrent)
+                  // Action Button Section
+                  // if/else structure is correct
+                  if (isCurrent) // Ensure isCurrent is passed correctly
                     Padding(
-                      padding: const EdgeInsets.only(
-                        left: 8.0,
-                      ), // Add some space
+                      // Correct
+                      padding: const EdgeInsets.only(left: 8.0),
                       child: IconButton(
+                        // Correct
                         icon: const Icon(
                           Icons.cancel_outlined,
+                          // Ensure ColorPalette is defined/imported
                           color: ColorPalette.error,
                         ),
                         tooltip: 'Cancel Order',
+                        // Assume _cancelOrder exists elsewhere
                         onPressed: () => _cancelOrder(order["slug"]),
-                        visualDensity:
-                            VisualDensity.compact, // Make it slightly smaller
+                        visualDensity: VisualDensity.compact,
                       ),
                     )
-                  else // Show arrow for past orders
+                  else // Correct
                     Padding(
+                      // Correct
                       padding: const EdgeInsets.only(left: 8.0),
                       child: Icon(
+                        // Correct
                         Icons.chevron_right,
+                        // Ensure ColorPalette is defined/imported
                         color: ColorPalette.greyMedium,
                       ),
                     ),
                 ],
               ),
-              const Divider(height: 24, thickness: 0.5),
-              // Address and Payment Info
+              const Divider(height: 24, thickness: 0.5), // Correct
+              // Address/Payment Info
+              // Assume _buildInfoRow exists elsewhere
               _buildInfoRow(Icons.location_on_outlined, deliveryAddress),
-              const SizedBox(height: 8),
+              const SizedBox(height: 8), // Correct
+              // Assume _buildInfoRow exists elsewhere
               _buildInfoRow(
                 Icons.payment_outlined,
+                // String interpolation with ternary is correct
                 "$paymentMethod • ${isPaid ? "Paid" : "Pending"}",
               ),
             ],
@@ -635,6 +671,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ), // Adjust padding based on icon
       visualDensity: VisualDensity.compact,
       side: BorderSide.none,
+    );
+  }
+
+  Widget buildImagePlaceholder() {
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        color: ColorPalette.greyLight,
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: const Icon(
+        Icons.cake_outlined, // Your desired cake icon
+        color: ColorPalette.greyMedium,
+        size: 35,
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:the_cakery/Screens/accounts_screen.dart';
 import 'package:the_cakery/utils/bottom_nav_bar.dart';
 import 'package:http/http.dart' as http;
@@ -61,7 +62,11 @@ class _CartScreenState extends State<CartScreen> {
                 "cake_price": double.parse(item["cake_price"]),
                 "size": item["size"],
                 "quantity": item["quantity"],
-                "imageUrl": item["image_url"],
+                "imageUrl":
+                    item['imageUrl'] is String &&
+                            (item['imageUrl'] as String).isNotEmpty
+                        ? item['imageUrl'] as String
+                        : null,
               };
             }).toList();
         charges["Subtotal"] = subtotal;
@@ -73,10 +78,14 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _editAddress() {
-    TextEditingController streetController = TextEditingController();
-    TextEditingController cityController = TextEditingController();
-    TextEditingController stateController = TextEditingController();
-    TextEditingController zipController = TextEditingController();
+    // --- 1. Still need Form key and Controllers ---
+    final _formKey = GlobalKey<FormState>();
+    final streetController = TextEditingController();
+    final cityController = TextEditingController();
+    final stateController = TextEditingController();
+    final zipController = TextEditingController();
+
+    // Optional: Pre-fill logic remains the same if needed
 
     showDialog(
       context: context,
@@ -90,21 +99,93 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildTextField(streetController, "Street"),
-                SizedBox(height: 8),
-                _buildTextField(cityController, "City"),
-                SizedBox(height: 8),
-                _buildTextField(stateController, "State"),
-                SizedBox(height: 8),
-                _buildTextField(
-                  zipController,
-                  "Zip Code",
-                  keyboardType: TextInputType.number,
-                ),
-              ],
+            // --- 2. Wrap fields in Form ---
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // --- 3. Use TextFormField directly with inline validator ---
+                  TextFormField(
+                    controller: streetController,
+                    decoration: InputDecoration(
+                      labelText: "Street Address",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ), // Basic border
+                    ),
+                    validator: (value) {
+                      // Inline validation
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Street cannot be empty';
+                      }
+                      return null;
+                    },
+                    autovalidateMode:
+                        AutovalidateMode
+                            .onUserInteraction, // Optional: Immediate feedback
+                  ),
+                  SizedBox(height: 10), // Adjusted spacing
+                  TextFormField(
+                    controller: cityController,
+                    decoration: InputDecoration(
+                      labelText: "City",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'City cannot be empty';
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                  SizedBox(height: 10),
+                  TextFormField(
+                    controller: stateController,
+                    decoration: InputDecoration(
+                      labelText: "State",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'State cannot be empty';
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                  SizedBox(height: 10),
+                  TextFormField(
+                    controller: zipController,
+                    decoration: InputDecoration(
+                      labelText: "Zip Code",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ], // Keep formatter
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Zip Code cannot be empty';
+                      }
+                      // Optional: Add more specific zip code validation if needed
+                      // if (value.length != 5) { // Example for US zip codes
+                      //   return 'Enter a valid 5-digit Zip Code';
+                      // }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -115,11 +196,16 @@ class _CartScreenState extends State<CartScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                setState(() {
-                  selectedLocation =
-                      "${streetController.text}, ${cityController.text}, ${stateController.text} - ${zipController.text}";
-                });
-                Navigator.pop(context);
+                // --- 4. Validate form on Save ---
+                if (_formKey.currentState!.validate()) {
+                  // Form is valid, proceed
+                  setState(() {
+                    selectedLocation =
+                        "${streetController.text.trim()}, ${cityController.text.trim()}, ${stateController.text.trim()} - ${zipController.text.trim()}"; // Trim values
+                  });
+                  Navigator.pop(context);
+                }
+                // Else: Errors are shown automatically, do nothing here
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.brown,
@@ -406,12 +492,32 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      item["imageUrl"],
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
+                    child:
+                        item['imageUrl'] != null
+                            ? Image.network(
+                              item['imageUrl'],
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              // --- Crucial Part: Error Handling ---
+                              errorBuilder: (context, error, stackTrace) {
+                                // On error, return the placeholder widget
+                                return _buildImageErrorPlaceholder();
+                              },
+                              // Optional: Basic loading indicator (can be removed if too much)
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null)
+                                  return child; // Image loaded
+                                return Container(
+                                  color: Colors.grey[200],
+                                ); // Simple grey box while loading
+                              },
+                            )
+                            : _buildImageErrorPlaceholder(), // Show placeholder if URL is null/empty initially
                   ),
                   SizedBox(width: 16),
                   Expanded(
@@ -470,6 +576,19 @@ class _CartScreenState extends State<CartScreen> {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildImageErrorPlaceholder() {
+    return Container(
+      width: 80,
+      height: 80,
+      color: Colors.grey[300], // Simple background
+      child: Icon(
+        Icons.cake_outlined, // Your desired icon
+        color: Colors.grey[600],
+        size: 40,
+      ),
     );
   }
 

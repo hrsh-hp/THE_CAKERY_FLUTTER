@@ -25,10 +25,10 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
   double selectedPrice = 0.0;
   List<String> selectedToppings = [];
   String cakeName = "";
-  String imageUrl = "";
-  String description = "";
+  String? imageUrl = "";
+  String? description = "";
   String cakeSlug = "";
-  String selectedSizeSlug = "";
+  String? selectedSizeSlug = "";
   double _spongePrice = 0.0;
   Map<String, dynamic> toppingsOptions = {};
   Map<String, Map<String, dynamic>> sizeOptions = {};
@@ -96,6 +96,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
         });
       }
     } catch (e) {
+      print("Error fetching cake details: $e");
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -208,7 +209,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                           fit: StackFit.expand,
                           children: [
                             CachedNetworkImage(
-                              imageUrl: imageUrl,
+                              imageUrl: imageUrl.toString(),
                               fit: BoxFit.cover,
                               placeholder:
                                   (context, url) => Container(
@@ -375,7 +376,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              description,
+                              description.toString(),
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[800],
@@ -637,7 +638,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
                   () => addToCart(
                     context,
                     cakeSlug,
-                    selectedSizeSlug,
+                    selectedSizeSlug.toString(),
                     quantity,
                     selectedPrice,
                     cakeName,
