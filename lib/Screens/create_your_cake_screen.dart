@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image/image.dart' as img;
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:the_cakery/utils/constants.dart';
+import 'package:the_cakery/utils/constants.dart'; // Assuming this defines Constants.baseUrl and Constants.prefs
 import 'package:image_picker/image_picker.dart';
 
 class CreateYourCakeScreen extends StatefulWidget {
@@ -23,13 +23,14 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   Map<String, dynamic> cakeData = {};
   Map<String, List<dynamic>> availableExtras = {};
   String errorMessage = '';
-  double _spongePrice = 0.0;
 
+  // --- State Variables for Selection ---
   String selectedSize =
       ""; // Stores the original string value like "0.5", "1.0"
-  double selectedPrice = 0.0;
+  double selectedPrice = 0.0; // Stores the price of the SELECTED size
   String selectedSpongeSlug = "";
   String selectedSponge = "";
+  double _spongePrice = 0.0; // Stores the price of the SELECTED sponge
   List<String> selectedToppings = [];
   Map<String, List<String>> selectedExtras = {
     'fillings': [],
@@ -51,7 +52,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   void initState() {
     super.initState();
     _userRequestController = TextEditingController();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchCakeModificationDetails();
     });
@@ -65,7 +65,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
 
   // --- Image Picking Logic (no changes) ---
   Future<void> _pickImage() async {
-    // ... (image picking logic remains the same) ...
     try {
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -81,17 +80,15 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
         );
 
         if (originalImage != null) {
-          // Optional: Resize if needed, adjust dimensions as required
+          // Optional: Resize if needed
           // img.Image compressedImage = img.copyResize(originalImage, width: 600);
           // File compressedFile = File(imageFile.path)..writeAsBytesSync(img.encodeJpg(compressedImage, quality: 75));
 
-          // Use original picked file directly for now, ensure backend handles size limits
-          File finalFile =
-              imageFile; // Use original or compressedFile if you implement compression
+          File finalFile = imageFile; // Use original for now
 
           int fileSize = await finalFile.length();
-          // Adjust size limit as needed (e.g., 1MB = 1024 * 1024)
           if (fileSize > 1 * 1024 * 1024) {
+            // 1MB limit
             _showErrorSnackBar("Image size must be less than 1MB");
             return;
           }
@@ -108,7 +105,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
 
   // --- Snackbar (no changes) ---
   void _showErrorSnackBar(String message) {
-    // ... (snackbar logic remains the same) ...
+    if (!mounted) return; // Check if widget is still in the tree
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -120,7 +117,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
 
   // --- Fetching Data (no changes) ---
   Future<void> _fetchCakeModificationDetails() async {
-    // ... (fetch logic remains the same) ...
     setState(() => isLoading = true);
     try {
       final response = await http
@@ -132,7 +128,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
             },
           )
           .timeout(
-            Duration(seconds: 15), // Increased timeout slightly
+            const Duration(seconds: 20), // Adjusted timeout
             onTimeout: () => throw TimeoutException('Connection timeout'),
           );
 
@@ -163,7 +159,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
       setState(() {
         errorMessage = 'An unexpected error occurred: $e';
       });
-      print("Fetch Error: $e"); // Log the error for debugging
+      print("Fetch Error: $e"); // Log the error
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
@@ -171,64 +167,75 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
     }
   }
 
-  // --- Processing Data (no changes) ---
+  // --- MODIFIED: Processing Data ---
   void _processResponseData(Map<String, dynamic> data) {
-    // ... (processing logic remains the same) ...
+    // Process sizes map into a list of maps
+    Map<String, dynamic>? rawSizes = data['sizes'] as Map<String, dynamic>?;
+    List<Map<String, dynamic>> processedSizes = [];
+    if (rawSizes != null) {
+      rawSizes.forEach((sizeKey, sizePrice) {
+        processedSizes.add({
+          'size': sizeKey, // The string key "0.3", "0.5" etc.
+          'price':
+              (sizePrice as num?)?.toDouble() ?? 0.0, // Ensure price is double
+          'slug': sizeKey, // Use size as slug for simplicity, adjust if needed
+        });
+      });
+      // Optional: Sort sizes numerically if they aren't guaranteed to be sorted
+      processedSizes.sort((a, b) {
+        double? sizeA = double.tryParse(a['size']);
+        double? sizeB = double.tryParse(b['size']);
+        if (sizeA != null && sizeB != null) {
+          return sizeA.compareTo(sizeB);
+        }
+        return 0; // Keep original order if parsing fails
+      });
+    }
+
     setState(() {
-      cakeData = data;
+      cakeData = data; // Keep the original data structure for other fields
+      cakeData['sizes'] =
+          processedSizes; // Store the processed list in cakeData
+
       availableExtras =
           data['available_extras'] != null
               ? (data['available_extras'] as Map).cast<String, List<dynamic>>()
               : {};
 
-      // Assuming sizes are now like ["0.3", "0.5", "1.0", "1.5"]
-      cakeData['sizes'] =
-          (data['sizes'] as List<dynamic>?)
-              ?.map(
-                (sizeValue) => {
-                  'size': sizeValue.toString(), // Ensure it's a string
-                  'price':
-                      '0', // Assuming price comes from elsewhere or is calculated
-                  'slug':
-                      sizeValue
-                          .toString(), // Use the value itself as slug or generate one
-                },
-              )
-              .toList() ??
-          [];
-
-      // Set initial selected size if available
-      if (cakeData['sizes'] != null && cakeData['sizes'].isNotEmpty) {
-        final firstSize = cakeData['sizes'][0];
-        selectedSize = firstSize['size']; // Store the string value "0.5" etc.
-        selectedPrice = double.tryParse(firstSize['price'] ?? '0') ?? 0.0;
+      // Set initial selected size and its price
+      if (processedSizes.isNotEmpty) {
+        final firstSize = processedSizes[0];
+        selectedSize = firstSize['size']; // e.g., "0.3"
+        selectedPrice = firstSize['price']; // e.g., 120.0
       } else {
-        selectedSize = ""; // Reset if no sizes
+        selectedSize = "";
         selectedPrice = 0.0;
       }
 
-      // Set initial selected sponge if available
+      // Set initial selected sponge and its price
       if (data['sponge'] != null && data['sponge'].isNotEmpty) {
         final firstSponge = data['sponge'][0];
         selectedSponge = firstSponge['sponge'];
         selectedSpongeSlug = firstSponge['slug'];
-        _spongePrice = double.tryParse(firstSponge['price'] ?? '0') ?? 0.0;
+        _spongePrice =
+            double.tryParse(firstSponge['price']?.toString() ?? '0') ?? 0.0;
       } else {
-        selectedSponge = ""; // Reset if no sponges
+        selectedSponge = "";
         selectedSpongeSlug = "";
         _spongePrice = 0.0;
       }
 
-      errorMessage = ''; // Clear error on successful data processing
+      errorMessage = ''; // Clear error on success
     });
   }
+  // --- END MODIFIED ---
 
-  // --- Price Calculation (no changes) ---
+  // --- MODIFIED: Price Calculation ---
   double calculateTotalPrice() {
-    // ... (price calculation logic remains the same) ...
-    double basePrice =
-        selectedPrice; // Base price is currently 0, needs logic if size affects price directly
+    // Base price is now the price of the selected size
+    double basePrice = selectedPrice;
 
+    // Calculate price from selected toppings
     double toppingsPrice = selectedToppings.fold(0.0, (sum, toppingSlug) {
       final topping =
           (cakeData['toppings'] as List<dynamic>?)?.firstWhere(
@@ -240,6 +247,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
           (double.tryParse(topping['price']?.toString() ?? '0') ?? 0.0);
     });
 
+    // Calculate price from selected extras
     double extrasPrice = selectedExtras.entries.fold(0.0, (sum, entry) {
       return sum +
           entry.value.fold(0.0, (categorySum, extraSlug) {
@@ -255,13 +263,14 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
           });
     });
 
-    // Ensure _spongePrice is included
+    // Add the selected sponge price
+    // The total is (Size Price + Toppings Price + Extras Price + Sponge Price) * Quantity
     return (basePrice + toppingsPrice + extrasPrice + _spongePrice) * quantity;
   }
+  // --- END MODIFIED ---
 
   // --- UI Helpers (no changes) ---
   Widget _buildSectionTitle(String title) => Padding(
-    // ... (remains the same) ...
     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     child: Text(
       title,
@@ -274,7 +283,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   );
 
   OutlineInputBorder _buildOutlinedBorder() {
-    // ... (remains the same) ...
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: Colors.grey[300]!),
@@ -282,7 +290,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
 
   OutlineInputBorder _buildFocusedBorder() {
-    // ... (remains the same) ...
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: Colors.brown, width: 1.5),
@@ -290,7 +297,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
 
   Widget _buildSpecialRequestsField() {
-    // ... (remains the same) ...
     return TextField(
       controller: _userRequestController,
       decoration: InputDecoration(
@@ -311,7 +317,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
 
   Widget _buildExtrasSection(String category, String title) {
-    // ... (remains the same) ...
     final options = availableExtras[category] ?? [];
     if (options.isEmpty) return SizedBox.shrink();
 
@@ -332,12 +337,17 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                   final isSelected =
                       selectedExtras[category]?.contains(extraOption['slug']) ??
                       false;
+                  final price =
+                      double.tryParse(
+                        extraOption['price']?.toString() ?? '0',
+                      ) ??
+                      0.0;
 
                   return Container(
-                    margin: EdgeInsets.symmetric(vertical: 2),
+                    margin: const EdgeInsets.symmetric(vertical: 2),
                     child: FilterChip(
                       label: Text(
-                        "${extraOption['name']} (+₹${extraOption['price']})",
+                        "${extraOption['name']}${price > 0 ? ' (+₹${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)})' : ''}",
                         style: TextStyle(
                           fontSize: 14,
                           color: isSelected ? Colors.white : Colors.grey[700],
@@ -375,11 +385,8 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
 
   Widget _buildToppingsSection() {
-    // ... (remains the same) ...
     final toppingsOptions = cakeData['toppings'] as List<dynamic>? ?? [];
-    if (toppingsOptions.isEmpty) {
-      return SizedBox.shrink();
-    }
+    if (toppingsOptions.isEmpty) return SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -396,11 +403,15 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                 toppingsOptions.map((toppingData) {
                   final topping = toppingData as Map<String, dynamic>;
                   final isSelected = selectedToppings.contains(topping['slug']);
+                  final price =
+                      double.tryParse(topping['price']?.toString() ?? '0') ??
+                      0.0;
+
                   return Container(
-                    margin: EdgeInsets.symmetric(vertical: 2),
+                    margin: const EdgeInsets.symmetric(vertical: 2),
                     child: FilterChip(
                       label: Text(
-                        "${topping['name']} (+₹${topping['price']})",
+                        "${topping['name']}${price > 0 ? ' (+₹${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)})' : ''}",
                         style: TextStyle(
                           fontSize: 14,
                           color: isSelected ? Colors.white : Colors.grey[700],
@@ -436,11 +447,9 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
 
   Widget _buildSpongeSelection() {
-    // ... (remains the same) ...
     if (cakeData['sponge'] == null || cakeData['sponge'].isEmpty) {
       return SizedBox.shrink();
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Column(
@@ -456,22 +465,22 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: DropdownButtonFormField<String>(
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
                 value:
                     selectedSpongeSlug.isNotEmpty ? selectedSpongeSlug : null,
-                hint: Text('Select Sponge'),
+                hint: const Text('Select Sponge'),
                 onChanged: (String? newValue) {
-                  if (newValue == null) return; // Handle null case if needed
+                  if (newValue == null) return;
                   setState(() {
                     selectedSpongeSlug = newValue;
                     final selectedSpongeData =
                         (cakeData['sponge'] as List<dynamic>).firstWhere(
                           (s) => s['slug'] == newValue,
                           orElse: () => null,
-                        ); // Handle not found
+                        );
                     if (selectedSpongeData != null) {
                       selectedSponge = selectedSpongeData['sponge'];
                       _spongePrice =
@@ -480,7 +489,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                           ) ??
                           0.0;
                     } else {
-                      // Handle case where selected slug somehow doesn't match data
                       selectedSponge = "";
                       _spongePrice = 0.0;
                     }
@@ -488,10 +496,13 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                 },
                 items:
                     (cakeData['sponge'] as List<dynamic>).map((sponge) {
+                      final price =
+                          double.tryParse(sponge['price']?.toString() ?? '0') ??
+                          0.0;
                       return DropdownMenuItem<String>(
                         value: sponge['slug'] as String,
                         child: Text(
-                          "${sponge['sponge']} (+₹${sponge['price']})",
+                          "${sponge['sponge']}${price > 0 ? ' (+₹${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)})' : ''}",
                         ),
                       );
                     }).toList(),
@@ -499,7 +510,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                     (value) =>
                         value == null || value.isEmpty
                             ? 'Please select a sponge'
-                            : null, // Add validation
+                            : null,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
             ),
@@ -509,19 +520,15 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
     );
   }
 
-  // --- NEW: Helper function to format size display ---
+  // --- Helper function to format size display (no changes needed here) ---
   String _formatSizeDisplay(String sizeValue) {
     final double? sizeNum = double.tryParse(sizeValue);
-    if (sizeNum == null) {
-      return sizeValue; // Return original if parsing fails
-    }
+    if (sizeNum == null) return sizeValue;
 
     if (sizeNum < 1.0) {
-      // Convert to grams
       final grams = (sizeNum * 1000).toInt();
       return "${grams}g";
     } else {
-      // Display as kg, removing ".0" if it's a whole number
       if (sizeNum == sizeNum.toInt()) {
         return "${sizeNum.toInt()}kg";
       } else {
@@ -529,85 +536,78 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
       }
     }
   }
-  // --- END NEW HELPER ---
 
   // --- MODIFIED: Size Selection Widget ---
   Widget _buildSizeSelection() {
-    if (cakeData['sizes'] == null || cakeData['sizes'].isEmpty) {
+    final sizesList =
+        cakeData['sizes'] as List<dynamic>?; // Now expecting a List<Map>
+    if (sizesList == null || sizesList.isEmpty) {
       return SizedBox.shrink();
     }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle("Size"), // Changed title slightly
+          _buildSectionTitle("Size"),
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 0,
-            ), // Adjusted padding
+            padding: const EdgeInsets.symmetric(horizontal: 0),
             child: SizedBox(
-              height: 45, // Slightly increased height for better touch
+              height: 45,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: cakeData['sizes']?.length ?? 0,
-                separatorBuilder:
-                    (context, index) => SizedBox(width: 8), // Increased spacing
+                itemCount: sizesList.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final sizeData =
-                      cakeData['sizes'][index] as Map<String, dynamic>;
-                  final String sizeValue =
-                      sizeData['size']; // e.g., "0.5", "1.0"
+                  final sizeData = sizesList[index] as Map<String, dynamic>;
+                  final String sizeValue = sizeData['size']; // e.g., "0.5"
+                  final double sizePrice = sizeData['price']; // e.g., 200.0
                   final bool isSelected = selectedSize == sizeValue;
-
-                  // Use the helper function to get the display text
-                  final String displaySize = _formatSizeDisplay(sizeValue);
+                  final String displaySize = _formatSizeDisplay(
+                    sizeValue,
+                  ); // e.g., "500g"
 
                   return InkWell(
                     onTap: () {
                       setState(() {
-                        selectedSize =
-                            sizeValue; // Store the original value "0.5", "1.0"
-                        // Update price if size affects base price (currently price is '0')
-                        selectedPrice =
-                            double.tryParse(sizeData['price'] ?? '0') ?? 0.0;
+                        selectedSize = sizeValue; // Update selected size string
+                        selectedPrice = sizePrice; // Update selected size price
                       });
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      padding: EdgeInsets.symmetric(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? Colors.brown[400]
-                                : Colors.white, // Changed unselected color
+                        color: isSelected ? Colors.brown[400] : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color:
                               isSelected
                                   ? Colors.brown[400]!
-                                  : Colors.grey[300]!, // Dynamic border
+                                  : Colors.grey[300]!,
                           width: isSelected ? 1.5 : 1.0,
                         ),
                         boxShadow:
                             isSelected
                                 ? [
-                                  // Add subtle shadow when selected
                                   BoxShadow(
                                     color: Colors.brown.withOpacity(0.2),
                                     blurRadius: 4,
-                                    offset: Offset(0, 2),
+                                    offset: const Offset(0, 2),
                                   ),
                                 ]
                                 : [],
                       ),
                       child: Center(
                         child: Text(
-                          displaySize, // Use the formatted display text
+                          displaySize, // Show formatted size (e.g., "500g", "1kg")
+                          // Optional: Display price alongside size if needed
+                          // displaySize + " (₹${sizePrice.toStringAsFixed(0)})",
                           style: TextStyle(
                             fontSize: 14,
                             color:
@@ -628,57 +628,61 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
   }
   // --- END MODIFIED ---
 
-  // --- Add to Cart Logic (no changes) ---
+  // --- Add to Cart Logic (no changes needed for API call structure) ---
   Future<void> _addToCart() async {
-    // ... (add to cart logic remains the same) ...
-    setState(() => isLoading = true); // Use the main isLoading flag
+    // Basic validation before proceeding
+    if (selectedSize.isEmpty) {
+      _showErrorSnackBar('Please select a size.');
+      return;
+    }
+    if (selectedSpongeSlug.isEmpty) {
+      _showErrorSnackBar('Please select a sponge.');
+      return;
+    }
+
+    setState(() => isLoading = true);
     try {
       final uri = Uri.parse('${Constants.baseUrl}/cake/cart/add_modified/');
       final request = http.MultipartRequest('POST', uri);
 
       request.headers.addAll({
         "Authorization": "Token ${Constants.prefs.getString("token")}",
-        // Content-Type is set automatically for multipart requests
       });
       request.fields.addAll({
-        'size':
-            selectedSize, // Send the original string value ("0.5", "1.0", etc.)
+        'size': selectedSize, // Send the string key like "0.5", "1.0"
         'quantity': quantity.toString(),
         'toppings': jsonEncode(selectedToppings),
         'extras': jsonEncode(selectedExtras),
-        'user_request': _userRequestController.text.trim(), // Trim requests
+        'user_request': _userRequestController.text.trim(),
         'sponge_slug': selectedSpongeSlug,
       });
 
       if (_customCakeImage != null) {
-        // Determine content type based on file extension (basic example)
         String fileExtension =
             _customCakeImage!.path.split('.').last.toLowerCase();
         String mimeType = 'image/jpeg'; // Default
-        if (fileExtension == 'png') {
+        if (fileExtension == 'png')
           mimeType = 'image/png';
-        } else if (fileExtension == 'gif') {
+        else if (fileExtension == 'gif')
           mimeType = 'image/gif';
-        } // Add more types if needed
 
         request.files.add(
           await http.MultipartFile.fromPath(
             'cake_image',
             _customCakeImage!.path,
-            contentType: MediaType.parse(mimeType), // Use parsed content type
+            contentType: MediaType.parse(mimeType),
           ),
         );
       }
 
       final streamedResponse = await request.send().timeout(
-        Duration(seconds: 30),
-      ); // Increased timeout for upload
+        const Duration(seconds: 30),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (!mounted) return; // Check mounted after await
+      if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Accept 201 Created
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cake added to cart!'),
@@ -686,7 +690,8 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
-        // Optionally navigate away or clear the form
+        // Optional: Clear form or navigate away
+        // _resetForm();
         // Navigator.pop(context);
       } else {
         String message = 'Failed to add to cart.';
@@ -696,9 +701,10 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
               responseData['message'] ??
               'Failed to add to cart (Code: ${response.statusCode}).';
         } catch (_) {
-          message = 'Failed to add to cart (Code: ${response.statusCode}).';
+          message =
+              'Failed to add to cart (Code: ${response.statusCode}). Response: ${response.body}';
         }
-        _showErrorSnackBar(message); // Use the helper
+        _showErrorSnackBar(message);
       }
     } on TimeoutException {
       if (!mounted) return;
@@ -714,20 +720,23 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
       print("Error adding to cart: $e");
     } finally {
       if (mounted) {
-        setState(() => isLoading = false); // Reset the main isLoading flag
+        setState(() => isLoading = false);
       }
     }
   }
 
-  // --- Build Method (no changes) ---
+  // --- Build Method (Structure remains the same, uses updated widgets/calculations) ---
   @override
   Widget build(BuildContext context) {
     super.build(context); // Keep state alive
 
+    // Determine if it's the initial load vs. add-to-cart load
+    final bool isInitialLoading = isLoading && cakeData.isEmpty;
+    final bool isAddingToCart = isLoading && cakeData.isNotEmpty;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        // ... (app bar remains the same) ...
         title: Text(
           "Customize Cake",
           style: TextStyle(
@@ -736,7 +745,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
           ),
         ),
         backgroundColor: Colors.white,
-        elevation: 1, // Add subtle elevation
+        elevation: 1,
         iconTheme: IconThemeData(color: Colors.brown[900]),
         titleTextStyle: TextStyle(
           color: Colors.brown[900],
@@ -744,21 +753,15 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
           fontSize: 18,
         ),
         centerTitle: true,
-        surfaceTintColor: Colors.transparent, // Prevent tint on scroll
+        surfaceTintColor: Colors.transparent,
       ),
       body: GestureDetector(
-        onTap:
-            () =>
-                FocusScope.of(
-                  context,
-                ).unfocus(), // Dismiss keyboard on tap outside
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Stack(
           children: [
-            // --- Loading State ---
-            if (isLoading &&
-                cakeData
-                    .isEmpty) // Show loader only if initial data isn't loaded yet
-              Center(
+            // --- Initial Loading State ---
+            if (isInitialLoading)
+              const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.brown),
                 ),
@@ -766,24 +769,26 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
             // --- Error State ---
             else if (errorMessage.isNotEmpty)
               Center(
-                // ... (error display remains the same) ...
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 60),
-                      SizedBox(height: 16),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 60,
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         errorMessage,
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       ElevatedButton.icon(
-                        // Added icon to retry button
-                        icon: Icon(Icons.refresh),
-                        label: Text('Retry'),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
                         onPressed: _fetchCakeModificationDetails,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.brown[400],
@@ -791,7 +796,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 20,
                             vertical: 10,
                           ),
@@ -804,37 +809,30 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
             // --- Content ---
             else
               RefreshIndicator(
-                // Allow pull-to-refresh
                 onRefresh: _fetchCakeModificationDetails,
                 color: Colors.brown,
                 child: SingleChildScrollView(
-                  physics:
-                      AlwaysScrollableScrollPhysics(), // Ensure scroll even when content is short
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(
                     bottom: 100,
-                  ), // Padding for bottom bar overlap
+                  ), // Padding for bottom bar
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // --- Image Section ---
                       Padding(
-                        // Add padding around image picker
                         padding: const EdgeInsets.all(12.0),
                         child: GestureDetector(
                           onTap: _pickImage,
                           child: AspectRatio(
-                            // Maintain aspect ratio
-                            aspectRatio: 16 / 10, // Adjust as needed
+                            aspectRatio: 16 / 10,
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(
-                                  12,
-                                ), // Consistent rounding
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.grey[300]!),
                               ),
-                              clipBehavior:
-                                  Clip.antiAlias, // Ensure image clips to rounded corners
+                              clipBehavior: Clip.antiAlias,
                               child:
                                   _customCakeImage != null
                                       ? Image.file(
@@ -842,19 +840,16 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                         fit: BoxFit.cover,
                                       )
                                       : Stack(
-                                        // Stack for overlay text/icon
                                         alignment: Alignment.center,
                                         children: [
-                                          // Default image if available
+                                          // Default image
                                           if (cakeData['image_url'] != null &&
                                               (cakeData['image_url'] as String)
                                                   .isNotEmpty)
                                             CachedNetworkImage(
                                               imageUrl: cakeData['image_url'],
                                               fit: BoxFit.cover,
-                                              width:
-                                                  double
-                                                      .infinity, // Ensure it fills container
+                                              width: double.infinity,
                                               height: double.infinity,
                                               placeholder:
                                                   (context, url) => Center(
@@ -877,20 +872,18 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                                     size: 40,
                                                   ),
                                             )
-                                          else // Placeholder if no default image
+                                          else // Placeholder icon
                                             Icon(
                                               Icons.image_outlined,
                                               color: Colors.grey[400],
                                               size: 50,
                                             ),
-
-                                          // Overlay Icon and Text
+                                          // Overlay
                                           Container(
                                             decoration: BoxDecoration(
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               gradient: LinearGradient(
-                                                // Subtle gradient overlay
                                                 colors: [
                                                   Colors.black.withOpacity(0.0),
                                                   Colors.black.withOpacity(0.4),
@@ -901,7 +894,6 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                             ),
                                           ),
                                           Positioned(
-                                            // Position text/icon at bottom
                                             bottom: 10,
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -912,7 +904,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                                   color: Colors.white
                                                       .withOpacity(0.8),
                                                 ),
-                                                SizedBox(width: 6),
+                                                const SizedBox(width: 6),
                                                 Text(
                                                   _customCakeImage == null
                                                       ? "Upload Reference Image (Optional)"
@@ -1001,7 +993,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                           ],
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       // --- Quantity Selector ---
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1014,32 +1006,26 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color:
-                                Colors
-                                    .white, // Use white background for contrast
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey[300]!),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildSectionTitle(
-                                "Quantity",
-                              ), // Reusing title style
+                              _buildSectionTitle("Quantity"),
                               Container(
                                 decoration: BoxDecoration(
-                                  color:
-                                      Colors
-                                          .grey[100], // Lighter background for buttons
+                                  color: Colors.grey[100],
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
                                   children: [
                                     IconButton(
-                                      icon: Icon(
+                                      icon: const Icon(
                                         Icons.remove_circle_outline,
                                         size: 20,
-                                      ), // Different icon
+                                      ),
                                       onPressed:
                                           quantity > 1
                                               ? () => setState(() => quantity--)
@@ -1047,12 +1033,10 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                       color:
                                           quantity > 1
                                               ? Colors.brown[600]
-                                              : Colors
-                                                  .grey, // Indicate disabled state
-                                      splashRadius: 20, // Smaller splash
-                                      constraints:
-                                          BoxConstraints(), // Remove default padding
-                                      padding: EdgeInsets.symmetric(
+                                              : Colors.grey,
+                                      splashRadius: 20,
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
                                         vertical: 4,
                                       ),
@@ -1060,7 +1044,7 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
-                                      ), // More horizontal padding
+                                      ),
                                       child: Text(
                                         "$quantity",
                                         style: TextStyle(
@@ -1071,16 +1055,16 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                                       ),
                                     ),
                                     IconButton(
-                                      icon: Icon(
+                                      icon: const Icon(
                                         Icons.add_circle_outline,
                                         size: 20,
-                                      ), // Different icon
+                                      ),
                                       onPressed:
                                           () => setState(() => quantity++),
                                       color: Colors.brown[600],
                                       splashRadius: 20,
-                                      constraints: BoxConstraints(),
-                                      padding: EdgeInsets.symmetric(
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
                                         vertical: 4,
                                       ),
@@ -1097,12 +1081,11 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                 ),
               ),
             // --- Loading Overlay for Add to Cart ---
-            if (isLoading &&
-                cakeData.isNotEmpty) // Show overlay only during add-to-cart
+            if (isAddingToCart)
               Positioned.fill(
                 child: Container(
                   color: Colors.black.withOpacity(0.3),
-                  child: Center(
+                  child: const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
@@ -1114,45 +1097,35 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
       ),
       // --- Bottom Navigation Bar ---
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ), // Adjusted padding
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            // Add shadow for elevation effect
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
               blurRadius: 10,
-              offset: Offset(0, -2),
+              offset: const Offset(0, -2),
             ),
           ],
-          // border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)), // Can remove border if shadow is used
         ),
         child: SafeArea(
-          // Ensure content is within safe area (especially for notches)
           child: ElevatedButton(
             onPressed:
                 isLoading
                     ? null
-                    : _addToCart, // Disable button during any loading state
+                    : _addToCart, // Disable button during ANY loading
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.brown[700],
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                vertical: 14,
-              ), // Increased padding
+              padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-              ), // Consistent rounding
-              elevation: 0, // Keep flat if desired, or add slight elevation
+              ),
+              elevation: 0,
             ),
             child:
-                isLoading &&
-                        cakeData
-                            .isNotEmpty // Show specific loader only for add-to-cart
-                    ? SizedBox(
+                isAddingToCart // Show loader only when adding to cart
+                    ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
@@ -1161,30 +1134,23 @@ class _CreateYourCakeScreenState extends State<CreateYourCakeScreen>
                       ),
                     )
                     : Column(
-                      // Keep the column layout for price and sponge info
+                      // Use Column to potentially show base price breakdown later
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
+                          // Display the FINAL calculated price
                           "Add to Cart • ₹${calculateTotalPrice().toStringAsFixed(2)}",
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        if (_spongePrice >
-                            0) // Show sponge price only if it's selected and has a price
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2.0),
-                            child: Text(
-                              "(+ ₹${_spongePrice.toStringAsFixed(2)} Sponge)", // Clearer text
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ),
+                        // Removed the sponge price display here for simplicity,
+                        // as the total price now correctly includes everything.
+                        // You could add it back if explicitly needed:
+                        // if (_spongePrice > 0)
+                        //   Padding(...)
                       ],
                     ),
           ),

@@ -43,7 +43,7 @@ class _CakeCustomScreenState extends State<CakeCustomScreen> {
     double toppingPrice = selectedToppings.fold(0, (sum, toppingSlug) {
       return sum + (toppingsOptions[toppingSlug]?["price"] ?? 0.0);
     });
-    return (toppingPrice + (_spongePrice * selectedPrice)) * quantity;
+    return (toppingPrice + (_spongePrice + selectedPrice)) * quantity;
   }
 
   Future<void> fetchCakeDetails() async {
